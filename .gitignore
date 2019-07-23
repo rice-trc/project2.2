@@ -1,0 +1,34 @@
+*.m~
+*.~
+# ignore some simulink stuff
+*.slxc
+slprj/
+*.r2016b
+
+*.el
+# LaTeX temporary files
+*.aux
+*.log
+*.toc
+# Latexmk
+*.fdb_latexmk
+*-eps-converted-to.pdf
+
+# SyncTeX
+*.synctex.gz
+
+# LaTeX Beamer
+*.snm
+*.vrb
+*.nav
+*.out
+
+# BibTeX
+*.bbl
+*.blg
+
+# ignore send directory
+send
+
+#
+*.mat

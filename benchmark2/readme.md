@@ -1,0 +1,1 @@
+Flat clamped-clamped beam, truncated to Nm>1 modes

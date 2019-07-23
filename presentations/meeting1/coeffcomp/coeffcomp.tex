@@ -1,0 +1,107 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\title{Comparing The Estimated Discrete-Time Model From PNLSS With The
+  Original Continuous-Time Model}
+\subtitle{Project 2 WP2: TRC 2019}
+\author{Meeting 1}
+\date{Fri Jun 28, 2019}
+
+\begin{document}
+\maketitle{}
+
+\begin{frame}[allowframebreaks]
+  \frametitle{Linear Terms}
+  \begin{itemize}
+  \item PNLSS is implemented in discrete time and hence, finding
+    physical meanings for the obtained coefficients is not trivial
+  \item For the linear parts of the system, the conversion may be
+    carried out using the state transition matrix\\
+    
+    \begin{columns}
+      \begin{column}{0.5\linewidth}
+        \centering
+        \textbf{Continuous Time Model}
+        \begin{align*}
+          \dot{X} &= \mathbf{A}X + \mathbf{B}u\\
+          Y &= \mathbf{C}X + \mathbf{D}u
+        \end{align*}
+      \end{column}
+      \begin{column}{0.5\linewidth}
+        \centering
+        \textbf{Discrete Time Model}
+        \begin{align*}
+          \dot{X}_{k+1} &= \mathbf{A_d}X_k + \mathbf{B_d}u_k\\
+          Y_k &= \mathbf{C_d}X_k + \mathbf{D_d}u_k
+        \end{align*}
+      \end{column}    
+    \end{columns}
+    
+    \textbf{Conversion Formulae:}
+    \begin{alignat*}{8}
+      \mathbf{A_d} &= e^{\mathbf{A}\Delta t}\qquad &\mathbf{B_d} &=
+      \mathbf{A}^{-1}\left(\mathbf{A_d}-\mathbf{I}\right)
+      \mathbf{B}\qquad &\mathbf{C_d} &= \mathbf{C}\qquad &\mathbf{D_d} &=
+      \mathbf{D}\\
+      \mathbf{A} &= \log\left(\mathbf{A}\right)f_{samp}\qquad &\mathbf{B} &=
+      {\left(\mathbf{A_d}-\mathbf{I}\right)}^{-1} \mathbf{A} \mathbf{B_d}
+      \mathbf{B}\qquad &\mathbf{C} &= \mathbf{C_d}\qquad &\mathbf{D} &=
+      \mathbf{D_d}\\
+      && f_{samp} &= \frac{1}{\Delta t}
+    \end{alignat*}
+  \item The model identified from PNLSS need not have states identical
+    to the physical ones used for simulations (displacements,
+    velocities). 
+  \item So these matrices must be transformed to a canonical form so
+    that the coefficients may directly be compared
+  \item The physical transformation based on (Etienne Gourc, JP Noel,
+    et.al "Obtaining Nonlinear Frequency Responses from Broadband
+    Testing"
+    \url{https://orbi.uliege.be/bitstream/2268/190671/1/294_gou.pdf})
+    \begin{columns}
+      \begin{column}{0.5\linewidth}
+        \begin{alignat*}{4}
+          \text{Original Model} \begin{bmatrix}
+            0 & 1\\ -2.7665\times 10^6 & -12.6409
+          \end{bmatrix}, &\begin{bmatrix} 0\\
+            1.3195 \end{bmatrix}, &\begin{bmatrix} 1 &
+            0 \end{bmatrix}, &\begin{bmatrix} 0 \end{bmatrix}\\
+          \text{PNLSS:} F_{RMS}=15 \begin{bmatrix}
+            0 & 1\\ -2.7676\times 10^6 & -12.7202
+          \end{bmatrix}, &\begin{bmatrix} 2.0402\times 10^{-4}\\
+            1.2888 \end{bmatrix}, &\begin{bmatrix} 1 &
+            0 \end{bmatrix}, &\begin{bmatrix} 0 \end{bmatrix}\\
+          \text{PNLSS:} F_{RMS}=150 \begin{bmatrix}
+            0 & 1\\ -2.7676\times 10^6 & -12.7251
+          \end{bmatrix}, &\begin{bmatrix} 2.0394\times 10^{-4}\\
+            1.2886 \end{bmatrix}, &\begin{bmatrix} 1 &
+            0 \end{bmatrix}, &\begin{bmatrix} 0 \end{bmatrix}
+        \end{alignat*}
+      \end{column}
+    \end{columns}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Non-Linear Terms}
+  \begin{itemize}
+  \item Things are a little more complicated for the nonlinear terms
+  \item We're unable to find a proper way to transform the discrete
+    time coefficient matrix (\textbf{E} in the code) to a continuous
+    time equivalent. 
+  \item Maybe integrals are involved? Since we have time history data
+    and also the nonlinearities are smooth, we may be able to
+    evaluate the integrals accurately.
+  \item We have tried to convert the coefficients matrices to the
+    physical domain (as in the previous slide), but are unable to
+    proceed further in order to truly compare the coefficients.
+  \end{itemize}
+\end{frame}
+
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

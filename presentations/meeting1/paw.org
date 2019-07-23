@@ -1,0 +1,94 @@
+Hi Malte,
+
+I have a question about convergence of the continuation method in NLvib.
+
+In the simualtion files you(or Florian I guess) provided on box, the source to NLvib is included in the folder 00_SRC for each benchmark. This is NLvib Version 1.0. It differs from the most recent version 1.1 found on your webpage in a single line:
+
+diff 00_SRC/solve_and_continue.m ../src/nlvib/SRC/solve_and_continue.m
+%% after the correction step we reject the current point and reduce step-size, 
+%% if fsolve didn't converge/residual larger than some tolerance.
+397c395
+<     if iEx<1
+---
+>     if iEx<1 || sqrt(Rext'*Rext)>Sopt.eps
+
+iEX is the status flag from fsolve and Rext is the output value of fsolve, ie. in this case the difference between the solution between the start and end of the period.
+So in the new version you also reject a point based on a error measure and not just the convergence of fsolve.
+
+Running the curved/clamped-clamped beam as provided with continuation settings:
+log10a_s = -7;    % start vibration level (log10 of modal mass)
+log10a_e = -3.2;  % end vibration level (log10 of modal mass)
+
+results in the NLvib v1.1 reversing the direction, while v1.0 giving the expected results; see also the two plots.
+The cropped output is
+
+- V1.1
+======
+Continuation at -7.0000, step size 0.1.
+--------------------
+Start continuation.
+--------------------
+Continuation at -6.9829, step size 0.1.
+...
+Continuation at -7.2458, step size 0.5.
+Continuation at -7.3428, step size 0.5.
+Terminating continuation since at least one of the termination criteria is met.
+--------------------
+COMPUTATIONAL EFFORT:
+Total elapsed time (toc) is 28.7 s
+Total number of function evaluations is 4685
+
+
+- V1.0
+======
+Continuation at -7.0000, step size 0.1.
+--------------------
+Start continuation.
+--------------------
+Continuation at -6.9829, step size 0.1.
+...
+Continuation at -3.2015, step size 0.5.
+Terminating continuation since parameter end value is reached.
+--------------------
+COMPUTATIONAL EFFORT:
+Total elapsed time (toc) is 171.9 s
+Total number of function evaluations is 31206
+
+
+The termination criterion stopping V1.1 is
+Sopt.termination_criterion = {@(X) X(end)<lammin || X(end)>lammax};
+
+where X(end) is the continuation parameter(ie. the current log10a value) and lammin and lammax is the log10a_e/s we set above. Thus, not surprising by looking at the continuation output, we are stopped by the 'Reversal protection'.
+
+Further info:
+sum(Solinfo.IEx < 1)
+> 0
+thus fsolve converges at all steps and there is no refinement of ds in V1.0
+
+To count the number of refinement in V1.1, we add the following
+diff solve_and_continue.m new_solve_and_continue.m 
+180d179
+< Solinfo.IERR = zeros(Sopt.stepmax,1);
+448d446
+<         Solinfo.IERR(istep) = ierr;
+496d493
+<         Solinfo.IERR(istep+1:end) = [];
+
+where ierr is a count of how many times the step have been refined for current point, ie:
+if iEx<1 || sqrt(Rext'*Rext)>Sopt.eps
+  ...
+else % refine step
+  ierr = ierr+1;
+  ...
+end
+
+And we get 15 refinements:
+sum(Solinfo.IERR(Solinfo.IERR > 0))
+> 15
+
+So after a long introduction;
+V1.1 changes continuation direction, caused by refinement of step size. By setting Sopt.eps large we can prevent the step refinement. But that counteracts the whole idea of residual based, adaptive step-size refinement.
+Do you have a better idea?
+
+Best regards,
+Team 2. 

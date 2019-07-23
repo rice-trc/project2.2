@@ -1,0 +1,1 @@
+Cantilever (Clamped-free) beam with elastic dry friction element
