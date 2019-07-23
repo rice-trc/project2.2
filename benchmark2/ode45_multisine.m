@@ -45,7 +45,7 @@ model.nlcof = struct('power', p, 'coef', E);
 upsamp = 1;  % Upsampling factor
 R  = 4;           % Realizations. (one for validation and one for testing)
 P  = 8;           % Periods, we need to ensure steady state
-mds = 2;
+mds = 123;
 switch mds
     case 1
         f1 = 200;          % low freq
@@ -57,18 +57,23 @@ switch mds
         f1 = 3400;          % low freq
         f2 = 3650;        % high freq
     case 123
-        f1 = 200;
-        f2 = 3600;
+        f1 = [200 1350 3400];
+        f2 = [700 1600 3650];
 end
 N  = 1e3;         % freq points
-f0 = (f2-f1)/N;
+f0 = (f2(1)-f1(1))/N;
 A = 0.01;  % Signal RMS amplitude
 Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 
 for A=Alevels(1:end)
     fprintf('A = %f\n', A);
+<<<<<<< HEAD:benchmark2/od45_multisine.m
     Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
     fs = Nt*f0;     % Samping frequency
+=======
+%     Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
+%     fs = Nt*f0;     % Samping frequency
+>>>>>>> d67f61f9fe5732440e5108358c1bb823159f4ae5:benchmark2/ode45_multisine.m
     
     fs = 2^14;
     Nt = fs/f0;
@@ -106,7 +111,8 @@ for A=Alevels(1:end)
     MS = cell(R, 1);
     for r=1:R
         % multisine force signal
-        [fex, MS{r}] = multisine(f1, f2, N, A, [], [], r);
+%         [fex, MS{r}] = multisine(f1, f2, N, A, [], [], r);
+        [fex, MS{r}] = multisine_multi(f1, f2, N, A, [], [], r);
 
         par = struct('M',M,'C',D,'K',K,'p',p,'E',E,'fex',fex, 'amp', Fex1);
 %         [tout,Y] = ode45(@(t,y) sys(t,y, par), t,[q0;u0]);
@@ -135,14 +141,14 @@ for A=Alevels(1:end)
     end
     disp(['ode45 with multisine in time domain required ' num2str(toc) ' s.']);
 
-    save(sprintf('data/ode45_multisine_A%.2f_F%d_mds%s.mat',A,fs,sprintf('%d',mds)),'u','y','ydot','yout','ydout','f1','f2','fs','freq',...
+    save(sprintf('data/ode45_multisine_A%.2f_F%d_mds%d.mat',A,fs,mds),'u','y','ydot','yout','ydout','f1','f2','fs','freq',...
         't','A','PHI_L2', 'MS', 'model', 'Nt','f0')
 
     %% show time series
 %     A = 0.01;
     sprintf('data/ode45_multisine_A%.2f_F%d.mat',A,fs)
 
-    load(sprintf('data/ode45_multisine_A%.2f_F%d_mds%s.mat',A,fs,sprintf('%d',mds)), 'yout')
+    load(sprintf('data/ode45_multisine_A%.2f_F%d_mds%d.mat',A,fs,mds), 'yout')
     
     r = 1;
 %     Y = PHI_L2*reshape(y(:,:,r,:),[],n)';
