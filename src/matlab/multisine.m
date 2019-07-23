@@ -61,7 +61,10 @@ lines = lines + 1;
 lines(lines==1) = [];
 
 phase = 2*pi*rand(linesMax,1);
-fex = @(t) A*har'*cos(2*pi*(1:linesMax)'*f0*t(:)' + phase) / sqrt(sum(har)/2);
+% fex = @(t) A*har'*cos(2*pi*(1:linesMax)'*f0*t(:)' + phase) / sqrt(sum(har)/2);
+
+phase = phase(lines-1);
+fex = @(t) A*sum(cos(2*pi*f0*lines'.*t(:)' + phase))/sqrt(length(lines)/2);
 
 ms.phase = phase;
 ms.lines = lines;

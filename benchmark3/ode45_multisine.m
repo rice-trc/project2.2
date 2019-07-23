@@ -79,8 +79,8 @@ for A=Alevels(1:end)
 %     Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
 %     fs = Nt*f0;     % Samping frequency
     
-%     fs = 2^12;
-    fs = 2^14;
+    fs = 2^12;
+%     fs = 2^14;
     Nt = fs/f0;
 
     Ntint = Nt*upsamp;
@@ -123,7 +123,7 @@ for A=Alevels(1:end)
         Y = ode8(@(t,y) odesys(t,y, par), tint, [q0;u0]);
         Yout = Y(:,1:n)*PHI_L2';
         Ydout = Y(:,n+(1:n))*PHI_L2';
-        
+
         u(:,:,r) = reshape(fex(t'), [Nt,P]);
         if upsamp > 1
             ytmp = dsample(reshape(Y(:,1:n), [Ntint,Pint,1,n]), upsamp);

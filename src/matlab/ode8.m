@@ -105,6 +105,6 @@ for i = 2:N
     F(:,stage) = feval(odefun,tstage,ystage,varargin{:});
   end  
   Y(:,i) = yi + F*(hi*B);
-  fprintf('%d/%d\n', i, N);
+%   fprintf('%d/%d\n', i, N);
 end
 Y = Y.';
