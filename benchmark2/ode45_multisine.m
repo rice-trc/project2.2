@@ -67,13 +67,6 @@ Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 
 for A=Alevels(1:end)
     fprintf('A = %f\n', A);
-<<<<<<< HEAD:benchmark2/od45_multisine.m
-    Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
-    fs = Nt*f0;     % Samping frequency
-=======
-%     Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
-%     fs = Nt*f0;     % Samping frequency
->>>>>>> d67f61f9fe5732440e5108358c1bb823159f4ae5:benchmark2/ode45_multisine.m
     
     fs = 2^14;
     Nt = fs/f0;
