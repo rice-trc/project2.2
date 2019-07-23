@@ -51,11 +51,11 @@ switch mds
         f1 = 200;          % low freq
         f2 = 700;        % high freq
     case 2
-        f1 = 1300;          % low freq
+        f1 = 1350;          % low freq
         f2 = 1600;        % high freq
     case 3
         f1 = 3400;          % low freq
-        f2 = 3600;        % high freq
+        f2 = 3650;        % high freq
     case 123
         f1 = 200;
         f2 = 3600;
@@ -69,6 +69,9 @@ for A=Alevels(1:end)
     fprintf('A = %f\n', A);
     Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
     fs = Nt*f0;     % Samping frequency
+    
+    fs = 2^14;
+    Nt = fs/f0;
 
     Ntint = Nt*upsamp;
     fsint = Ntint*f0;
