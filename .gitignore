@@ -30,5 +30,10 @@ slprj/
 # ignore send directory
 send
 
-#
+# mat files
 *.mat
+
+# matlab backups
+*.asv
+
+
