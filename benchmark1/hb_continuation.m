@@ -11,7 +11,7 @@ addpath(genpath(srcpath));
 
 % Fundamental parameters
 Dmod = [.38 .12 .09 .08 .08]*.01;
-Nmod = 5;
+Nmod = 1;
 setup = 'New_Design_Steel';
 thickness = .001;
 [L,rho,E,om,PHI,~,gam] = beams_for_everyone(setup,Nmod,thickness);

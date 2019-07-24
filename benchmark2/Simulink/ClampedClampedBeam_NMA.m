@@ -208,9 +208,11 @@ R = 3.00; % resistance [Ohm]
 Tau = 15.4791; % shaker ratio of thrust to coil current [N/A]
 
 %%%%% State space model
-A_shaker = [- R/L 0 -Tau/L 0 0; 0 0 1 0 0; ...
-    Tau/M_C -K_C/M_C -C_C/M_C K_C/M_C C_C/M_C; 0 0 0 0 1; ...
-    0 K_C/M_T C_C/M_T -(K_C+K_S)/M_T -(C_C+C_S)/M_T];
+A_shaker = [-R/L 0 -Tau/L 0 0; 
+            0 0 1 0 0; ...
+            Tau/M_C -K_C/M_C -C_C/M_C K_C/M_C C_C/M_C; 
+            0 0 0 0 1; ...
+            0 K_C/M_T C_C/M_T -(K_C+K_S)/M_T -(C_C+C_S)/M_T];
 B_shaker = [Tau/M_C 0 0 0 0; 0 0 0 0 1/M_T]';
 C_shaker = [0 0 0 1 0; 0 0 0 0 1];
 D_shaker = [0 0 0 0];

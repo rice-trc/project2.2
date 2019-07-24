@@ -12,7 +12,7 @@ savefig  = true;
 
 Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 
-mds = 1;
+mds = 2;
 
 PerOrNot = [true true true true true true true true true true true];  % true if periodic; false if not
 % fs = 4096;
@@ -72,7 +72,11 @@ Y = fft(y);  Y = Y(lines, :, :, :);  % Output Spectrum at excited lines
 
 % Estimate linear state-space model (frequency domain subspace)
 % Model order
-na = 2;
+if mds>1
+    na = [2, 3, 4, 5, 6, 7, 8];
+else
+    na = [2];
+end
 maxr = 20;
 % Excited frequencies (normed)
 freqs_norm = (lines-1)/Nt;
@@ -98,7 +102,6 @@ for n = na
         min_err = err;
     end
 end
-min_na = na(1);
 % Select the best model
 model = models{min_na};
 [A,B,C,D] = model{:};
@@ -280,7 +283,7 @@ for ia=1:length(Alevels)
     errormeasures{ia} = err;
     seqmodels{ia} = model;
     
-    save(sprintf('./data/pnlssmodel_A%.2f_F%d_nx%s.mat', Alevels(ia), fs, sprintf('%d',nx)), 'model', 'err')
+    save(sprintf('./data/pnlssmodel_A%.2f_F%d_nx%s_mds%d.mat', Alevels(ia), fs, sprintf('%d',nx),mds), 'model', 'err')
     
     fprintf('Done %d/%d\n', ia, length(Alevels))
     
@@ -303,4 +306,4 @@ for ia=1:length(Alevels)
     % disp(['rms(noise(:))/sqrt(P) = ' num2str(rms(noise(:))/sqrt(P)) ' (= Noise level)'])
 end
 
-save('./data/seqpnlssmodels.mat', 'Alevels', 'errormeasures', 'seqmodels');
+save(sprintf('./data/seqpnlssmodels_mds%d.mat',mds), 'Alevels', 'errormeasures', 'seqmodels');

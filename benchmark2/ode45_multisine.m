@@ -110,7 +110,7 @@ for A=Alevels(1:end)
         par = struct('M',M,'C',D,'K',K,'p',p,'E',E,'fex',fex, 'amp', Fex1);
 %         [tout,Y] = ode45(@(t,y) sys(t,y, par), t,[q0;u0]);
         Y = ode8(@(t,y) sys(t,y, par), tint, [q0;u0]);
-        Yout = Y(:,1:n)*PHI_L2';
+        Yout = Y(:,1:n)*PHI_L2';CD
         Ydout = Y(:,n+(1:n))*PHI_L2';
         
         u(:,:,r) = reshape(fex(t'), [Nt,P]);
