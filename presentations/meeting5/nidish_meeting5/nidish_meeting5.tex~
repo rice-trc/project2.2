@@ -1,0 +1,16 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{bm}
+
+\title{TRC 2019 Project 2 WP 2 Meeting 5}
+\author{Eve, Nidish, Paw}
+
+\begin{document}
+\maketitle{}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

@@ -12,7 +12,7 @@ savefig  = true;
 
 Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 
-mds = 2;
+mds = 123;
 
 PerOrNot = [true true true true true true true true true true true];  % true if periodic; false if not
 % fs = 4096;
@@ -141,10 +141,10 @@ modellintest = model; modellintest.T1 = 0;
 W = [];  
 
 %% Sequential PNLSS
-errormeasures = cell(size(Alevels));
-seqmodels = cell(size(Alevels));
-modelguess = modellinest;
-for ia=1:length(Alevels)
+% errormeasures = cell(size(Alevels));
+% seqmodels = cell(size(Alevels));
+% modelguess = modellinest;
+for ia=2:length(Alevels)
     load(sprintf('./data/ode45_multisine_A%.2f_F%d_mds%d.mat',Alevels(ia), fs, mds), 'u', 'y');
 
     [Nt, P, R, n] = size(y);

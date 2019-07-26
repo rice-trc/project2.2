@@ -145,7 +145,7 @@ a_w_L_2_NMA = sqrt([1 0.5*ones(1,2*H)]*w_L_2_NMA_sum.^2); % compute amplitude
 
 %% Setup simulated experiments
 
-Shaker = 'yes'; % 'yes', 'no'
+Shaker = 'no'; % 'yes', 'no'
 exc_node = 1; % node for external excitation
  % Simulation time in seconds
 phase_lag = 90; % phase lag in degree
@@ -294,18 +294,25 @@ res_NMA = cell2struct([struct2cell(res_bb); struct2cell(res_damp)], names, 1);
 
 % Compare modal characteristics for experiment and Harmonic Balance methods
 
-% Modal frequency vs. amplitude
-figure;
-semilogx(abs(Y_HB_1)*PHI_L_2,om_HB/om_lin(imod),'g-', 'LineWidth', 2);
+%% Modal frequency vs. amplitude
+figure(1);
+clf()
+% semilogx(abs(Y_HB_1)*PHI_L_2,om_HB/om_lin(imod),'k-', 'LineWidth', 2);
+% hold on
+% semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/(res_LMA.freq(1)*2*pi),'k.','MarkerSize',20)
+% xlabel('amplitude in m'); ylabel('$\omega/\omega_0$')
+semilogx(abs(Y_HB_1)*PHI_L_2,om_HB/2/pi,'k-', 'LineWidth', 2);
 hold on
-semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/(res_LMA.freq(1)*2*pi),'k.','MarkerSize',10)
-xlabel('amplitude in m'); ylabel('$\omega/\omega_0$')
+semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/2/pi,'k.','MarkerSize',20)
+% set(gca, 'XScale', 'linear')
+xlabel('amplitude (m)'); ylabel('Natural Frequency $\omega$ (Hz)')
 legend('NMA with NLvib','simulated experiment')
 
 % Modal damping ratio vs. amplitude
-figure; 
-semilogx(abs(Y_HB_1)*PHI_L_2,del_HB*1e2,'g-', 'LineWidth', 2);
+figure(2); 
+clf()
+semilogx(abs(Y_HB_1)*PHI_L_2,del_HB*1e2,'k-', 'LineWidth', 2);
 hold on
-semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),abs(res_NMA.del_i_nl)*1e2*PHI_L_2^2,'k.','MarkerSize',10)
+semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),abs(res_NMA.del_i_nl)*1e2*PHI_L_2^2,'k.','MarkerSize',20)
 xlabel('amplitude in m'); ylabel('modal damping ratio in %')
 legend('NMA with NLvib','simulated experiment')
