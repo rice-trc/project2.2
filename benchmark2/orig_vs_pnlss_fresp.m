@@ -86,7 +86,7 @@ nx = [3];
 mds = 123;
 fs = 16384;
 
-for ia = 2:length(Alevels)
+for ia = 1:length(Alevels)
 Alevel = Alevels(ia);
 load(sprintf('./data/pnlssmodel_A%.2f_F%d_nx%s_mds%d.mat',Alevel,fs,sprintf('%d',nx),mds),'model');
 % load(sprintf('./data/pnlssout_A%d_F%d.mat',Alevel,fs),'model');
@@ -112,7 +112,7 @@ for iex=1:length(exc_lev)
             zeros(2*(H-1)*length(model.A),1)];                  % initial guess
     
 % 	TYPICAL_x = 1e5*Ff/(2*D*M*om^2);
-    TYPICAL_x = 1e-2;
+    TYPICAL_x = 1e-4;
     Dscale = [TYPICAL_x*ones(length(X0),1);Om_s];
     Sopt = struct('ds',ds,'dsmin',dsmin,'dsmax',dsmax,'flag',1,'stepadapt',1, ...
             'predictor','tangent','parametrization','arc_length', ...
