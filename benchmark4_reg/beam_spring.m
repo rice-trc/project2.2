@@ -1,3 +1,4 @@
+addpath('../src/transient/')
 
 % Adding spring mass and stiffness to FE beam.
 % dof: transverse of 5'th node
