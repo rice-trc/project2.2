@@ -12,7 +12,7 @@ savefig  = true;
 
 Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 
-mds = 123;
+mds = 2;
 
 PerOrNot = [true true true true true true true true true true true];  % true if periodic; false if not
 % fs = 4096;
