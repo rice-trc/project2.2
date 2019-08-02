@@ -16,7 +16,7 @@ addpath('../src/nlvib/SRC/MechanicalSystems/')
 dataname = 'ms_full';
 savedata = true;
 savefig = true;
-
+savesys = true;
 benchmark = 4;
 
 % nat freqs for first 5 modes, Fully free system. linear. (Hz)
@@ -48,21 +48,46 @@ K([icpl end],[icpl end]) = K([icpl end],[icpl end]) + [1 -1;-1 1]*k;
 n = length(M);
 w = zeros(n,1); w(end) = 1;
 muN = 1e2;
+eps_reg = 1e-4;  % % Set tanh regularization parameter
 nonlinear_elements = struct('type','tanhDryFriction',...
-    'friction_limit_force',muN,'force_direction',w);
-oscillator = MechanicalSystem(M,0*M,K,nonlinear_elements,...
-    zeros(length(M),1));
+    'friction_limit_force',muN,'force_direction',w,'eps',eps_reg);
 
 % Vectors recovering deflection at tip and nonlinearity location
-T_nl = oscillator.nonlinear_elements{1}.force_direction';
+% T_nl = oscillator.nonlinear_elements{1}.force_direction';
+T_nl = w';
 T_tip = zeros(1,n); T_tip(end-2) = 1;
 
-% Set tanh regularization parameter
-oscillator.nonlinear_elements{1}.eps = 1e-4;
+%% Modal analysis the linearized system
+% Modes for free sliding contact
+[PHI_free,OM2] = eig(K,M);
+om_free = sqrt(diag(OM2));
+% Sorting
+[om_free,ind] = sort(om_free); PHI_free = PHI_free(:,ind);
+
+% Modes for fixed contact
+inl = find(T_nl); B = eye(length(M)); B(:,inl) = [];
+[PHI_fixed,OM2] = eig(B'*K*B,B'*M*B);
+om_fixed = sqrt(diag(OM2));
+% Sorting
+[om_fixed,ind] = sort(om_fixed); PHI_fixed = B*PHI_fixed(:,ind);
+
+%% define system
+% Specify stiffness proportional damping corresponding to D=1% at linear 
+% at the first linearized resonance
+beta   = 2*1e-2/om_fixed(1);
+C = beta*K;
+
+oscillator = MechanicalSystem(M,C,K,nonlinear_elements,...
+    zeros(length(M),1));
 
 % Apply forcing to free end of beam in translational direction
 oscillator.Fex1(end-2) = 1;
 Fex1 = oscillator.Fex1;
+
+if savesys
+    save('data/system.mat','M','C','K','w','muN','eps_reg','T_tip',...
+         'Fex1','om_free','om_fixed')
+end
 
 
 %% multisine, using time domain formulation
@@ -73,8 +98,8 @@ N = 1e3;
 Nt = 2^13;
 upsamp = 4;
 
-R  = 4;            % Realizations. (one for validation and one for testing)
-P  = 8;           % Periods, we need to ensure steady state
+R  = 2;            % Realizations. (one for validation and one for testing)
+P  = 6;           % Periods, we need to ensure steady state
 
 Ntint = Nt*upsamp;  % Upsampled points per cycle
 f0 = (f2-f1)/N;     % frequency resolution -> smaller -> better

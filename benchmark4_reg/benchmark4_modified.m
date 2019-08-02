@@ -99,7 +99,7 @@ log10a_HB = X_HB(end,:);
 a_HB = 10.^log10a_HB;
 Q_HB = Psi_HB.*repmat(a_HB,size(Psi_HB,1),1);
 
-save('nma_fricbeam');
+save('data/nma_fricbeam');
 
 %% Nonlinear frequency response analysis using Harmonic Balance
 T_tip = zeros(1,n); T_tip(end-2) = 1;
@@ -156,7 +156,7 @@ end
 
 %% NMA
 
-sdat = load('nma_fricbeam');
+sdat = load('data/nma_fricbeam');
 om_NM1 = sdat.om_HB;
 Qtip_NM1 = kron(eye(2*sdat.H+1),T_tip)*sdat.Q_HB;
 Qtip_rms_NM1 = sqrt(sum(Qtip_NM1.^2))/sqrt(2);
