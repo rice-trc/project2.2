@@ -8,98 +8,39 @@
 % close all
 clear variables
 
-srcdir = '../src/matlab';
-addpath(srcdir);
+addpath(genpath('../src/matlab'))
 addpath('../src/nlvib/SRC/')
 addpath('../src/nlvib/SRC/MechanicalSystems/')
 
 dataname = 'ms_full';
 savedata = true;
 savefig = true;
+fpath = './fig/';
 savesys = true;
 benchmark = 4;
 
+[oscillator, modal] = cantilever_beam(savesys);
+
+Fex1 = oscillator.Fex1;
+fdof = find(Fex1);
+nldof = find(oscillator.nonlinear_elements{1}.force_direction);
+n = oscillator.n;
 % nat freqs for first 5 modes, Fully free system. linear. (Hz)
 % 48.1 301.3 844.4 1659.2 2758.0
 % nat freqs for first 5 modes, Fully impact system. (linear) (Hz)
 % 62.1 322.8 847.0 1661.2 2759.8
 
-
-% Properties of the beam
-len = 2;                % length
-height = .05*len;       % height in the bending direction
-thickness = 3*height;   % thickness in the third dimension
-E = 185e9;              % Young's modulus
-rho = 7830;             % density
-BCs = 'clamped-free';   % constraints
-
-% Setup one-dimensional finite element model of an Euler-Bernoulli beam
-n_nodes = 9;            % number of equidistant nodes along length
-beam = FE_EulerBernoulliBeam(len,height,thickness,E,rho,...
-    BCs,n_nodes);
-
-% Attach additional mass and spring and apply dry friction element
-kstatic = 3*E*thickness*height^3/12/len^3;
-icpl = length(beam.M)-1;
-m = .02*beam.M(icpl,icpl); k = kstatic*2e-1;
-M = blkdiag(beam.M,m);
-K = blkdiag(beam.K,0);
-K([icpl end],[icpl end]) = K([icpl end],[icpl end]) + [1 -1;-1 1]*k;
-n = length(M);
-w = zeros(n,1); w(end) = 1;
-muN = 1e2;
-eps_reg = 1e-4;  % % Set tanh regularization parameter
-nonlinear_elements = struct('type','tanhDryFriction',...
-    'friction_limit_force',muN,'force_direction',w,'eps',eps_reg);
-
-% Vectors recovering deflection at tip and nonlinearity location
-% T_nl = oscillator.nonlinear_elements{1}.force_direction';
-T_nl = w';
-T_tip = zeros(1,n); T_tip(end-2) = 1;
-
-%% Modal analysis the linearized system
-% Modes for free sliding contact
-[PHI_free,OM2] = eig(K,M);
-om_free = sqrt(diag(OM2));
-% Sorting
-[om_free,ind] = sort(om_free); PHI_free = PHI_free(:,ind);
-
-% Modes for fixed contact
-inl = find(T_nl); B = eye(length(M)); B(:,inl) = [];
-[PHI_fixed,OM2] = eig(B'*K*B,B'*M*B);
-om_fixed = sqrt(diag(OM2));
-% Sorting
-[om_fixed,ind] = sort(om_fixed); PHI_fixed = B*PHI_fixed(:,ind);
-
-%% define system
-% Specify stiffness proportional damping corresponding to D=1% at linear 
-% at the first linearized resonance
-beta   = 2*1e-2/om_fixed(1);
-C = beta*K;
-
-oscillator = MechanicalSystem(M,C,K,nonlinear_elements,...
-    zeros(length(M),1));
-
-% Apply forcing to free end of beam in translational direction
-oscillator.Fex1(end-2) = 1;
-Fex1 = oscillator.Fex1;
-
-if savesys
-    save('data/system.mat','M','C','K','w','muN','eps_reg','T_tip',...
-         'Fex1','om_free','om_fixed')
-end
-
-
 %% multisine, using time domain formulation
-exc_lev = [1,5,10,15,30];
+% exc_lev =  [0.1,1,5,10,15,30,40,50,70,80,100,120,150];
+exc_lev = 15;
 f1 = 10;
 f2 = 100;
 N = 1e3;
 Nt = 2^13;
-upsamp = 4;
+upsamp = 1;
 
 R  = 2;            % Realizations. (one for validation and one for testing)
-P  = 6;           % Periods, we need to ensure steady state
+P  = 6;            % Periods, we need to ensure steady state
 
 Ntint = Nt*upsamp;  % Upsampled points per cycle
 f0 = (f2-f1)/N;     % frequency resolution -> smaller -> better
@@ -129,7 +70,6 @@ t2   = Pint/f0;
 t = linspace(t1, P/f0, Nt*P+1);  t(end) = [];
 % upsampled time vector.
 tint = linspace(t1, t2, Ntint*Pint+1);  tint(end) = [];
-% t1 = t1:1/fs:t2-1/fs;
 freq = (0:Nt-1)/Nt*fs;   % downsampled frequency content
 nt = length(t);          % total number of points
 
@@ -149,7 +89,7 @@ for r=1:R
     % multisine force signal
     [fex, MS{r}] = multisine(f1, f2, N, A, [], [], r);
     oscillator.Fex1 = Fex1*A;
-    [tout,Y] = ode45(@(t,y) odesys(t,y, fex, oscillator), tint,[q0;u0]);
+    [t,Y] = ode45(@(t,y) odesys(t,y, fex, oscillator), tint,[q0;u0]);
     % Y = ode8(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
  
     % no need to downsample u. Just use the downsampled time vector
@@ -174,7 +114,7 @@ disp(['ode5 with multisine in time domain required ' num2str(toc) ' s.']);
 
 if savedata
     save(sprintf('data/b%d_A%d_up%d_%s',benchmark,A,upsamp,dataname),...
-        'u','y','ydot','f1','f2','fs','freq','t','A','beam','MS','upsamp')
+        'u','y','ydot','f1','f2','fs','freq','t','A','MS','upsamp')
 end
 
 
@@ -183,26 +123,25 @@ end
 if usejava('jvm') && feature('ShowFigureWindows')
     
 idof = fdof;
-fpath = './FIGURES/pnlss';
-
 ms_plot(t,y,u,freq,idof,benchmark,A,dataname,savefig,fpath)
 
 %% Check the spectrum match between downsampled and original data 
-Y1 = fft(Y(1:Ntint,idof))/(Ntint);
-Y2 = fft(y(1:Nt,1,1,idof))/(Nt);
+Y1 = fft(Y(1:Ntint,[idof, nldof]),[],1)/(Ntint);
+Y2 = fft(y(1:Nt,1,1,[idof, nldof]),[],1)/(Nt);
 freq = (0:Nt-1)/Nt*fs;
 nft1 = length(Y1)/2;
 nft2 = length(Y2)/2;
-freq1= (0:Ntint-1)/Ntint*fsint; 
-freq2= (0:Nt-1)/Nt*fs; 
+freq1 = (0:Ntint-1)/Ntint*fsint; 
+freq2 = (0:Nt-1)/Nt*fs; 
 figure
 hold on
-plot(freq1(1:nft1), db(abs(Y1(1:nft1))))
-plot(freq2(1:nft2), db(abs(Y2(1:nft2))),'--')
-legend('Original','Downsampled')
+% plot(freq1(1:nft1), db(abs(Y1(1:nft1,:))))
+plot(freq2(1:nft2), db(abs(Y2(1:nft2,:))),'--')
+%legend('Original','Downsampled')
+legend('fdof','nldof')
 xlabel('Frequency (Hz)')
 ylabel('Magnitude (dB)')
-xlim([40,70])
+%xlim([40,70])
 grid minor
 grid on
 export_fig(gcf,sprintf('%s/b%d_A%g_fft_comp_n%d',fpath,benchmark,A,idof),'-png')

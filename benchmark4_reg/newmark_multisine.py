@@ -32,10 +32,10 @@ modal analysis, ie. either fully stuck or fully sliding.
 scan = True
 
 # define multisine
-f0 = 10
-f1 = 160
+f0 = 5
+f1 = 70
 Nt = 2**13
-fs = 1000
+fs = 5000
 
 if scan:
     R = 1
@@ -48,10 +48,18 @@ else:
     P = 6
     Avec = [20]
     upsamp = 20
-    ms = 'ms'
+    fname = 'ms'
 
 ns = Nt*R*P
 t = np.arange(ns)/fs
+fsint = upsamp * fs
+Ntint = upsamp * Nt
+# add extra period which will be removed due to edge effects
+Pfilter = 1
+if upsamp > 1:
+    P = Pfilter + P
+nsint = Ntint*P*R
+dt = 1/fsint
 
 
 # load system defined in matlab
@@ -70,15 +78,6 @@ ndof = M.shape[0]
 # Fixed contact and free natural frequencies (rad/s).
 om_fixed = data['om_fixed'].squeeze()
 om_free = data['om_free'].squeeze()
-
-fsint = upsamp * fs
-Ntint = upsamp * Nt
-# add extra period which will be removed due to edge effects
-Pfilter = 1
-if upsamp > 1:
-    P = Pfilter + P
-nsint = Ntint*P*R
-dt = 1/fsint
 
 np.random.seed(0)
 u, lines, freq = multisine(f0, f1, N=Ntint, fs=fsint, R=R, P=P)
