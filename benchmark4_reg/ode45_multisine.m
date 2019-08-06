@@ -13,7 +13,7 @@ addpath('../src/nlvib/SRC/')
 addpath('../src/nlvib/SRC/MechanicalSystems/')
 
 dataname = 'ms_full';
-savedata = true;
+savedata = false;
 savefig = true;
 fpath = './fig/';
 savesys = true;
@@ -32,15 +32,15 @@ n = oscillator.n;
 
 %% multisine, using time domain formulation
 % exc_lev =  [0.1,1,5,10,15,30,40,50,70,80,100,120,150];
-exc_lev = 15;
+exc_lev = 20;
 f1 = 10;
 f2 = 100;
-N = 1e3;
-Nt = 2^13;
+N = 5e2;
+Nt = 2^14;
 upsamp = 1;
 
-R  = 2;            % Realizations. (one for validation and one for testing)
-P  = 6;            % Periods, we need to ensure steady state
+R  = 1;            % Realizations. (one for validation and one for testing)
+P  = 1;            % Periods, we need to ensure steady state
 
 Ntint = Nt*upsamp;  % Upsampled points per cycle
 f0 = (f2-f1)/N;     % frequency resolution -> smaller -> better
@@ -113,8 +113,9 @@ end
 disp(['ode5 with multisine in time domain required ' num2str(toc) ' s.']);
 
 if savedata
+    lines = MS{1}.lines;
     save(sprintf('data/b%d_A%d_up%d_%s',benchmark,A,upsamp,dataname),...
-        'u','y','ydot','f1','f2','fs','freq','t','A','MS','upsamp')
+        'u','y','ydot','f1','f2','fs','freq','t','A','MS','upsamp','lines')
 end
 
 

@@ -30,18 +30,21 @@ modal analysis, ie. either fully stuck or fully sliding.
 """
 
 scan = True
+benchmark = 4
 
 # define multisine
 f0 = 5
 f1 = 70
 Nt = 2**13
-fs = 5000
+fs = 15000
 
 if scan:
     R = 1
-    P = 2
+    P = 1
     Avec = [10, 30, 50, 70, 80, 100, 120]
-    upsamp = 25
+    Avec = [0.1,1,5,10,15,30,40,50,70,80,100,120,150]
+    #Avec = [50]
+    upsamp = 1
     fname = 'scan'
 else:
     R = 2
@@ -79,16 +82,23 @@ ndof = M.shape[0]
 om_fixed = data['om_fixed'].squeeze()
 om_free = data['om_free'].squeeze()
 
+#data2 = loadmat('data/b4_A1_up1_ms_full.mat')
+#u = data2['u'].squeeze()
+#freq = data2['freq'].squeeze()
+#fs = data2['fs'].item()
+#dt = 1/fs
+#nsint = len(u)
+#Ntint = nsint
+
 np.random.seed(0)
 u, lines, freq = multisine(f0, f1, N=Ntint, fs=fsint, R=R, P=P)
 fext = np.zeros((nsint, ndof))
 
 nls = NLS(Tanhdryfriction(eps=eps, w=w, kt=muN))
-
+sys = Newmark(M, C, K, nls)
 for A in Avec:
     fext[:, fdof] = A*u.ravel()
     print(f'Newmark started with ns: {nsint}, A: {A}')
-    sys = Newmark(M, C, K, nls)
     try:
         x, xd, xdd = sys.integrate(fext, dt, x0=None, v0=None,
                                    sensitivity=False)
@@ -100,11 +110,13 @@ for A in Avec:
             nfd = Y.shape[0]//2
             plt.figure()
             plt.plot(freq[:nfd], db(np.abs(Y[:nfd])))
-            plt.xlim([0, 200])
+            plt.xlim([0, 50])
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Amplitude (dB)')
             plt.legend(['Force dof', 'nl dof'])
-            plt.savefig(f'amp_scan_A{A}.png')
+            plt.minorticks_on()
+            plt.grid(which='both')
+            plt.savefig(f'fig/nm_b{benchmark}_A{A}_fft_comp_n{fdof}.png')
     except ValueError as e:
         print(f'Newmark integration failed with error {e}. For A: {A}')
 
