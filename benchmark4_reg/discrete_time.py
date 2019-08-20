@@ -9,10 +9,10 @@ from scipy import signal
 from scipy.io import loadmat
 
 from pyvib.common import db, dsample
-from pyvib.forcing import multisine  # , multisine_time
+from pyvib.forcing import multisine, multisine_time
 from pyvib.modal import mkc2ss
 from pyvib.newmark import Newmark
-from pyvib.nlss import NLSS  # , dnlsim2
+from pyvib.nlss import NLSS, dnlsim2
 from pyvib.nonlinear_elements import NLS, Tanhdryfriction
 
 """This script simulates a cantilever beam with attached slider
@@ -41,14 +41,14 @@ benchmark = 4
 f1 = 5
 f2 = 70
 npp = 2**15
-fs = 30000
-
+fs = 15000
 if scan:
     R = 1
-    P = 1
+    P = 4
     Avec = [10, 30, 50, 70, 80, 100, 120]
     Avec = [0.1, 1, 5, 10, 15, 30, 40, 50, 70, 80, 100, 120, 150]
-    Avec = [0.1, 150]
+    #Avec = [0.1, 50, 1500, 3000]
+    Avec = np.round(np.logspace(1,4,20)).astype(int)
     upsamp = 1
     fname = 'scan'
 else:
@@ -97,24 +97,24 @@ Ec = np.zeros((2*ndof, 1))
 Fc = np.zeros((ndof, 0))
 Ec[ndof+nldof] = -muN
 
-# cmodel = NLSS(csys.A, csys.B, csys.C, csys.D, Ec, Fc)
-# cmodel.add_nl(nlx=nlx, nly=nly)
+cmodel = NLSS(csys.A, csys.B, csys.C, csys.D, Ec, Fc)
+cmodel.add_nl(nlx=nlx, nly=nly)
 
-# nhar = 1000
-# np.random.seed(0)
-# ufunc = multisine_time(f1, f2, N=nhar)
-# def fex_cont(A, t):
-#     t = np.atleast_1d(t)
-#     fex = np.zeros((len(t), ndof))
-#     fex[:, fdof] = A*ufunc(t)
-#     return fex
-#     #return np.vstack((np.zeros(len(t)), A*ufunc(t), np.zeros(len(t)))).T
+nhar = 1000
+np.random.seed(0)
+ufunc = multisine_time(f1, f2, N=nhar)
+def fex_cont(A, t):
+    t = np.atleast_1d(t)
+    fex = np.zeros((len(t), ndof))
+    fex[:, fdof] = A*ufunc(t)
+    return fex
+    #return np.vstack((np.zeros(len(t)), A*ufunc(t), np.zeros(len(t)))).T
 
-# f0 = (f2-f1) / nhar
-# t2 = P/f0
-# tc = np.linspace(0, t2, nppint*P, endpoint=False)
-# fsc = f0*nppint
-# freqc = np.arange(nppint)/nppint * fsc
+f0 = (f2-f1) / nhar
+t2 = P/f0
+tc = np.linspace(0, t2, nppint*P, endpoint=False)
+fsc = f0*nppint
+freqc = np.arange(nppint)/nppint * fsc
 
 # x = ufunc(tc)
 # X = np.fft.fft(x)
@@ -126,7 +126,7 @@ Ec[ndof+nldof] = -muN
 
 
 # convert to discrete time
-dsys = csys.to_discrete(dt=dt, method='zoh')  # tustin
+dsys = csys.to_discrete(dt=dt, method='foh')  # tustin
 Ed = np.zeros((2*ndof, 1))
 Fd = np.zeros((ndof, 0))
 # euler discretization
@@ -146,8 +146,8 @@ for A in Avec:
     T1 = np.r_[npp*Ntr, np.r_[0:(R-1)*P*nppint+1:P*nppint]]
     fext[:, fdof] = A*u.ravel()
     _, y, x = dmodel.simulate(fext, T1=T1)
-    # fexc = partial(fex_cont, A)
-    # _, yc, xc = dnlsim2(cmodel, fexc, tc)
+    fexc = partial(fex_cont, A)
+    _, yc, xc = dnlsim2(cmodel, fexc, tc)
 
     try:
         if scan:
@@ -155,11 +155,11 @@ for A in Avec:
             #          fdof=fdof, nldof=nldof)
             # plot frf for forcing and tanh node
             Yd = np.fft.fft(y[-nppint:, [fdof, nldof]], axis=0)
-            #Yc = np.fft.fft(yc[-nppint:, [fdof, nldof]], axis=0)
+            Yc = np.fft.fft(yc[-nppint:, [fdof, nldof]], axis=0)
             nfd = Yd.shape[0]//2
             plt.figure()
             plt.plot(freq[:nfd], db(np.abs(Yd[:nfd])))
-            # plt.plot(freqc[:nfd], db(np.abs(Yc[:nfd])))
+            plt.plot(freqc[:nfd], db(np.abs(Yc[:nfd])))
             plt.xlim([0, 50])
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Amplitude (dB)')
@@ -167,7 +167,7 @@ for A in Avec:
             plt.title(f'A: {A}')
             plt.minorticks_on()
             plt.grid(which='both')
-            # plt.savefig(f'fig/dc_b{benchmark}_A{A}_fft_comp_n{fdof}.png')
+            plt.savefig(f'fig/dc_b{benchmark}_A{A}_fft_comp_n{fdof}.png')
     except ValueError as e:
         print(f'Discrete stepping failed with error {e}. For A: {A}')
 
