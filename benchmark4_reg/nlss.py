@@ -24,11 +24,6 @@ Data = namedtuple('Data', ['sig', 'uest', 'yest', 'uval', 'yval', 'utest',
                            'npp', 'Ntr'])
 Result = namedtuple('Result', ['est_err', 'val_err', 'test_err', 'noise',
                                'errvec', 'descrip'])
-nmax = 100
-info = 1
-p = 2
-weight = False
-add_noise = False
 
 
 def plot_bla(res, data, p):
@@ -318,6 +313,10 @@ def load_mat(fname):
     return d
 
 
+nmax = 100
+info = 1
+weight = False
+
 nldof = 2
 subscan = False
 dtype = 'discrete'
@@ -337,7 +336,8 @@ upsamp = 70
 for A in Avec:
     print(f'A:{A}')
     # try:
-    datname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}.npz'
+    epsf = f'{eps}'.replace('.', '')
+    datname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
     raw_data = load_npz(datname, dtype=dtype, include_vel=True)
     # Ntr: how many transient periods in T1 for identification
     data = partion_data(raw_data, Ntr=2, Ntr_steady=1)
@@ -355,7 +355,7 @@ for A in Avec:
     # plot periodicity for one realization to verify data is steady state
     figs['per'] = data.sig.periodicity(dof=nldof)
 
-    savefig('fig/nlss_', figs)
+    savefig('fig/nlss_eps{epsf}_{dtype}_', figs)
 
     # except ValueError as e:
     #    print(f'Could not load {datname}. Error {e}')

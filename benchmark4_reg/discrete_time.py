@@ -90,10 +90,11 @@ ndof = M.shape[0]
 om_fixed = data['om_fixed'].squeeze()
 om_free = data['om_free'].squeeze()
 
-eps = 0.1
+eps = 0.01
 wd = [0,0,0,0,0,1]
 nlx = NLS(Tanhdryfriction(eps=eps, w=wd))
 nly = None
+epsf = f'{eps}'.replace('.', '')
 
 # cont time
 a, b, c, d = mkc2ss(M, K, C)
@@ -186,7 +187,7 @@ for A in Avec:
     plt.title(f'A: {A}')
     plt.minorticks_on()
     plt.grid(which='both')
-    plt.savefig(f'fig/dc_b{benchmark}_A{A}_fft_comp_n{fdof}.png')
+    plt.savefig(f'fig/dc_b{benchmark}_A{A}_eps{epsf}_fft_comp_n{fdof}.png')
 
 # We need to reshape into (npp,m,R,P)
 ys = [ynm, ydnm, yddnm, yd[:,:3], yd[:,3:]]
@@ -203,9 +204,9 @@ if upsamp:  # > 1:
     xs = [dsample(y, upsamp) for y in xs]
     us = [u[::upsamp, :, :, 1:] for u in us]
 
-np.savez(f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}.npz', ynm=ys[0],
-         ydotnm=ys[1], yddotnm=ys[2], yd=ys[3], ydotd=ys[4], xd=xs[0],
-         ud=us[0], linesd=linesd, fs=fs, A=A)
+np.savez(f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz', ynm=ys[0],
+         ydotnm=ys[1], yddotnm=ys[2], yd=ys[3], ydotd=ys[4], xd=xs[0], ud=us[0],
+         linesd=linesd, fs=fs, A=A)
 
 # plt.figure()
 #plt.plot(t, x, '-k', label=r'$x_1$')
