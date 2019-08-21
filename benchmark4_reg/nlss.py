@@ -21,7 +21,7 @@ from pyvib.subspace import Subspace
 # data containers
 Data = namedtuple('Data', ['sig', 'uest', 'yest', 'uval', 'yval', 'utest',
                            'ytest', 'um', 'ym', 'covY', 'freq', 'lines',
-                           'npp', 'Ntr', 'fs'])
+                           'npp', 'Ntr'])
 Result = namedtuple('Result', ['est_err', 'val_err', 'test_err', 'noise',
                                'errvec', 'descrip'])
 nmax = 100
@@ -31,11 +31,11 @@ weight = False
 add_noise = False
 
 
-
-def plot_bla(data, p):
+def plot_bla(res, data, p):
     figs = {}
     lines = data.lines
     freq = data.freq
+    npp, _, R, P = data.yest.shape
 
     # BLA plot. We can estimate nonlinear distortion
     # total and noise distortion averaged over P periods and M realizations
@@ -59,12 +59,12 @@ def plot_bla(data, p):
     plt.ylabel('magnitude (dB)')
     plt.title(f'Estimated BLA and nonlinear distortion p: {p}')
     plt.legend(('BLA FRF', 'Noise Distortion', 'Total Distortion'))
-    #plt.gca().set_ylim(bottom=-150)
+    # plt.gca().set_ylim(bottom=-150)
     figs['bla'] = (plt.gcf(), plt.gca())
     return figs
 
 
-def plot(res, data, p):
+def plot_val(res, data, p):
     figs = {}
     lines = data.lines
     freq = data.freq
@@ -83,25 +83,28 @@ def plot(res, data, p):
     plt.ylabel('Output (errors) (dB)')
     plt.legend(('Output',) + res.descrip + ('Noise',))
     plt.title(f'Validation results p:{p}')
-    figs['val_data'] = (plt.gcf(), plt.gca())
+    figs['val_error'] = (plt.gcf(), plt.gca())
 
     return figs
 
-def plot_path(errvec):
+
+def plot_path(res, data, p):
     figs = {}
     plt.figure()
-    for desc, err in errvec.items():
-        if len(err) == 0: continue
+    for desc, err in res.errvec.items():
+        if len(err) == 0:
+            continue
         # optimization path for NLSS
-        plt.plot(db(err),label=desc)
+        plt.plot(db(err), label=desc)
         imin = np.argmin(err)
         plt.scatter(imin, db(err[imin]))
     plt.xlabel('Successful iteration number')
     plt.ylabel('Validation error [dB]')
     plt.title('Selection of the best model on a separate data set')
     plt.legend()
-    figs['pnlss_path'] = (plt.gcf(), plt.gca())
+    figs['path'] = (plt.gcf(), plt.gca())
     return figs
+
 
 def plot_time(res, data, p):
     figs = {}
@@ -111,8 +114,18 @@ def plot_time(res, data, p):
     plt.ylabel('Output (errors)')
     plt.legend(('Output',) + res.descrip)
     plt.title(f'Estimation results p:{p}')
-    figs['estimation_error'] = (plt.gcf(), plt.gca())
+    figs['est_error'] = (plt.gcf(), plt.gca())
     return figs
+
+
+def disp_plot(data, res, nldof):
+    f1 = plot_bla(res, data, nldof)
+    f2 = plot_val(res, data, nldof)
+    f3 = plot_path(res, data, nldof)
+    f4 = plot_time(res, data, nldof)
+    figs = {**f1, **f2, **f3, **f4}
+    return figs
+
 
 def savefig(fname, figs):
     for k, fig in figs.items():
@@ -120,7 +133,8 @@ def savefig(fname, figs):
         for i, f in enumerate(fig):
             f[0].tight_layout()
             f[0].savefig(f"{fname}{k}{i}.png")
-            
+
+
 def identify_nlss(data, linmodel, nlx, nly, nmax=25, info=2):
     Rest = data.yest.shape[2]
     T1 = np.r_[data.npp*data.Ntr, np.r_[0:(Rest-1)*data.npp+1:data.npp]]
@@ -137,7 +151,8 @@ def identify_nlss(data, linmodel, nlx, nly, nmax=25, info=2):
 
     return model, nl_errvec
 
-def identify_fnsi(data, nlx, nly, n=4, r=20, nmax=25, optimize=True,info=2):
+
+def identify_fnsi(data, nlx, nly, n=6, r=15, nmax=25, optimize=True, info=2):
     fnsi_errvec = []
     # FNSI can only use 1 realization
     sig = deepcopy(data.sig)
@@ -155,30 +170,32 @@ def identify_fnsi(data, nlx, nly, n=4, r=20, nmax=25, optimize=True,info=2):
         try:
             fnsi1.optimize(lamb=100, weight=weight, nmax=nmax, info=info)
             fnsi_errvec = fnsi1.extract_model(data.yval, data.uval,
-                                         T1=data.npp*data.Ntr, info=info)
-        except:
-            pass 
+                                              T1=data.npp*data.Ntr, info=info)
+        except ValueError as e:
+            print(f'FNSI optimization failed with {e}')
     return fnsi1, fnsi_errvec
 
-def identify_linear(data, n=3, r=20, subscan = True, info=2):
+
+def identify_linear(data, n=6, r=20, subscan=True, info=2):
     lin_errvec = []
     linmodel = Subspace(data.sig)
     #linmodel._cost_normalize = 1
     if subscan:
-        linmodel.scan(nvec=[2,3,4,5,6,7,8], maxr=20, optimize=True, weight=False,info=info)
+        linmodel.scan(nvec=[2, 3, 4, 5, 6, 7, 8], maxr=20,
+                      optimize=True, weight=False, info=info)
         lin_errvec = linmodel.extract_model(data.yval, data.uval)
         print(f"Best subspace model, n, r: {linmodel.n}, {linmodel.r}")
-        
+
         linmodel.estimate(n=n, r=r, weight=weight)
         linmodel.optimize(weight=weight, info=info)
     else:
         linmodel.estimate(n=n, r=r, weight=weight)
         linmodel.optimize(weight=weight, info=info)
     return linmodel, lin_errvec
-        
+
+
 def evaluate_models(data, models, errvec, info=2):
-    
-    
+
     descrip = tuple(models.keys())  # convert to tuple for legend concatenation
     models = list(models.values())
     Rest = data.yest.shape[2]
@@ -216,38 +233,12 @@ def evaluate_models(data, models, errvec, info=2):
     return Result(est_err, val_err, test_err, noise, errvec, descrip)
 
 
-def run(data, include_vel=True, figname=''):
-    if include_vel:
-        #w = [0,0,0, 0,0,1]
-        w = [0,0,0,1]
-    else:
-        w = [0,0,1]
-
-    fdof = 0
-    nldof = 2
-
-    tahn1 = Tanhdryfriction(eps=0.0001, w=w)
-    nlx = [tahn1]
-    nlx_pnl = [Pnl(degree=[2,3], structure='statesonly')]
-    nly = None
-
-    lines = data['lines'].squeeze()[2:-1] - 1
-    # from matlab: (npp,P,R,p). We need (npp,p,R,P)
-    y = data['y'].squeeze().transpose(0,3,2,1)
-    ydot = data['ydot'].squeeze().transpose(0,3,2,1)
-    u = data['u'].squeeze()[...,None].transpose(0,3,2,1)
-    fs = data['fs'].item()
-
-    if include_vel:
-        #y = np.hstack((y, ydot))
-        y = np.hstack((y, ydot[:,-1][:,None]))
-
+def partion_data(data, Rest=2, Ntr=1, Ntr_steady=1):
+    y = data['y']
+    u = data['u']
+    lines = data['lines']
+    freq = data['freq']
     npp, p, R, P = y.shape
-    freq = np.arange(npp)/npp*fs
-
-    ## START of Identification ##
-    Rest = 2
-    Ntr = 1
     # partitioning the data. Use last period of two last realizations.
     # test for performance testing and val for model selection
     utest = u[:, :, -1, -1]
@@ -255,8 +246,8 @@ def run(data, include_vel=True, figname=''):
     uval = u[:, :, -2, -1]
     yval = y[:, :, -2, -1]
     # all other realizations are used for estimation
-    uest = u[..., :Rest, Ntr:]
-    yest = y[..., :Rest, Ntr:]
+    uest = u[..., :Rest, Ntr_steady:]
+    yest = y[..., :Rest, Ntr_steady:]
     # noise estimate over periods. This sets the performace limit for the
     # estimated model
     covY = covariance(yest)
@@ -264,76 +255,107 @@ def run(data, include_vel=True, figname=''):
     # create signal object
     sig = Signal(uest, yest, fs=fs)
     sig.lines = lines
-
+    # plot periodicity for one realization to verify data is steady state
+    # sig.periodicity()
     # Calculate BLA, total- and noise distortion. Used for subspace
     # identification
     sig.bla()
     # average signal over periods. Used for training of PNLSS model
     um, ym = sig.average()
 
-    Ntr = 3
-    dat1 = Data(sig, uest, yest, uval, yval, utest, ytest, um, ym, covY,
-                freq, lines, npp, Ntr, fs)
+    return Data(sig, uest, yest, uval, yval, utest, ytest, um, ym, covY,
+                freq, lines, npp, Ntr)
 
-    info = 1
-    n = 3
-    r = 20
-    nmax = 100
-    subscan = True
+
+def identify(data, nlx, nly, n, r, subscan=True):
     errvec = {}
     models = {}
-    models['lin'], _ = identify_linear(dat1, n=n, r=r, subscan=subscan, info=info)
-    models['nlss'], errvec['nlss'] = identify_nlss(dat1, models['lin'], nlx, nly, nmax=nmax, info=info)
-    models['nlss_pnl'], errvec['nlss_pnl'] = identify_nlss(dat1, models['lin'], nlx_pnl, nly, nmax=nmax, info=info)
-    models['fnsi'], _ = identify_fnsi(dat1, nlx, nly, n=n, r=r, nmax=nmax, optimize=False,info=info)
-    models['fnsi optim'], errvec['fnsi'] = identify_fnsi(dat1, nlx, nly, n=n, r=r, nmax=nmax, optimize=True,info=info)
+    models['lin'], _ = identify_linear(
+        data, n=n, r=r, subscan=subscan, info=info)
+    models['fnsi'], _ = identify_fnsi(
+        data, nlx, nly, n=n, r=r, nmax=nmax, optimize=False, info=info)
+    models['fnsi optim'], errvec['fnsi'] = identify_fnsi(
+        data, nlx, nly, n=n, r=r, nmax=nmax, optimize=True, info=info)
+    models['nlss'], errvec['nlss'] = identify_nlss(
+        data, models['lin'], nlx, nly, nmax=nmax, info=info)
 
-    res = evaluate_models(dat1, models, errvec, info=info)
+    # nly_pnl = [Pnl(degree=[2, 3, 5], structure='statesonly')]
+    # nlx_pnl = [Pnl(degree=[2, 3, 5], structure='statesonly')]
+    # models['nlss_pnl'], errvec['nlss_pnl'] = identify_nlss(
+    # data, models['lin'], nlx_pnl, nly_pnl, nmax=nmax, info=info)
+    res = evaluate_models(data, models, errvec, info=info)
+    return models, res
 
-    f1 = plot_bla(dat1, nldof)
-    f2 = plot(res, dat1, nldof)
-    f3 = plot_path(errvec)
-    f4 = plot_time(res, dat1, nldof)
-    figs = {**f1, **f2, **f3, **f4}
 
-    # subspace plots
-    if subscan:
-        linmodel = models['lin']
-        figs['subspace_optim'] = linmodel.plot_info()
-        figs['subspace_models'] = linmodel.plot_models()
-    # plot periodicity for one realization to verify data is steady state
-    figs['per'] = sig.periodicity(dof=nldof)
+def load_npz(fname, dtype='nm', include_vel=True):
+    with np.load(fname) as data:
+        if dtype == 'nm':
+            d = {'lines': data['linesd'], 'fs': data['fs'].item(), 'u':
+                 data['ud'], 'y': data['ynm'], 'yd': data['ydotnm'], 'ydd':
+                 data['yddotnm']}
+        elif dtype == 'discrete':
+            d = {'lines': data['linesd'], 'fs': data['fs'].item(), 'u':
+                 data['ud'], 'y': data['yd'], 'yd': data['ydotd']}
+            # , 'yd': data['xd'][:, 3:]}
 
-    savefig(f'fig/nlss_{figname}_A{A}n{n}', figs)
+    npp = d['y'].shape[0]
+    d['freq'] = np.arange(npp)/npp * d['fs']
+    if include_vel:
+        d['y'] = np.hstack((d['y'], d['yd'][:, -1][:, None]))
 
-    return models, dat1, res
+    return d
 
+
+def load_mat(fname):
+    d = {}
+    lines = data['lines'].squeeze()[2:-1] - 1
+    # from matlab: (npp,P,R,p). We need (npp,p,R,P)
+    y = data['y'].squeeze().transpose(0, 3, 2, 1)
+    ydot = data['ydot'].squeeze().transpose(0, 3, 2, 1)
+    u = data['u'].squeeze()[..., None].transpose(0, 3, 2, 1)
+    fs = data['fs'].item()
+
+    return d
+
+
+nldof = 2
+subscan = False
+dtype = 'discrete'
+
+w = [0, 0, 0, 1]
+eps = 0.1
+tahn1 = Tanhdryfriction(eps=eps, w=w)
+nlx = [tahn1]
+nly = None
 
 include_vel = True
-#data = loadmat('data/b4_A15_up1_ms_full.mat')
-#lines = data['lines'].squeeze()[2:-1] - 1
-# A = '30'
+Avec = [700]
+fs = 750
+fname = 'ms'
+upsamp = 70
 
-Avec = [10,30,50,150]
 for A in Avec:
     print(f'A:{A}')
-    try:
-        data = loadmat(f'data_lin/b4_A{A}_up1_ms_full.mat')
-        models, dat, res = run(data, include_vel=True, figname='lin')
-    except:
-        pass
+    # try:
+    datname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}.npz'
+    raw_data = load_npz(datname, dtype=dtype, include_vel=True)
+    # Ntr: how many transient periods in T1 for identification
+    data = partion_data(raw_data, Ntr=2, Ntr_steady=1)
+    plot_bla([], data, nldof)
 
-Avec = [5,10,15,30,50,150]
-for A in Avec:
-    print(f'A:{A}')
-    try:
-        data = loadmat(f'data/b4_A{A}_up1_ms_full.mat')
-        models, dat, res = run(data, include_vel=True, figname='nl')
-    except:
-        pass
+    models, res = identify(data, nlx, nly, n=6, r=15, subscan=subscan)
+    figs = disp_plot(data, res, nldof)
 
-#fname = 'data/ms_condenced.npz'
-#data = np.load(fname)
-#u = data['fext2'][:,None,:,1:]
-#y = data['x2']
-#fs = 750  #data['fs']
+    # subspace plots
+    linmodel = models['lin']
+    figs['subspace_models'] = linmodel.plot_models()
+    if subscan:
+        figs['subspace_optim'] = linmodel.plot_info()
+
+    # plot periodicity for one realization to verify data is steady state
+    figs['per'] = data.sig.periodicity(dof=nldof)
+
+    savefig('fig/nlss_', figs)
+
+    # except ValueError as e:
+    #    print(f'Could not load {datname}. Error {e}')
