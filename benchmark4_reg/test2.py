@@ -355,9 +355,10 @@ def identify(data, nlx, nly, n, r, subscan=True):
     models['nlss'], errvec['nlss'] = identify_nlss(
         data, models['lin'], nlx, nly, nmax=nmax, info=info)
 
+    nly_pnl = [Pnl(degree=[2, 3, 5], structure='statesonly')]
     nlx_pnl = [Pnl(degree=[2, 3, 5], structure='statesonly')]
-    models['nlss_pnl'], errvec['nlss_pnl'] = identify_nlss(
-        data, models['lin'], nlx_pnl, nly, nmax=nmax, info=info)
+    # models['nlss_pnl'], errvec['nlss_pnl'] = identify_nlss(
+    #     data, models['lin'], nlx_pnl, nly_pnl, nmax=nmax, info=info)
     res = evaluate_models(data, models, errvec, info=info)
     return models, res
 
@@ -376,7 +377,7 @@ info = 1
 subscan = False
 nldof = 1
 
-tahn1 = Tanhdryfriction(eps=0.01, w=[0, 1])
+tahn1 = Tanhdryfriction(eps=0.0001, w=[0, 1])
 nlx = [tahn1]
 F = np.array([])
 nly = None
@@ -398,10 +399,11 @@ models, res3 = identify(data3, nlx, nly, n=2, r=5, subscan=subscan)
 figs = disp_plot(data3, res3, nldof)
 
 # subspace plots
+linmodel = models['lin']
+figs['subspace_models'] = linmodel.plot_models()
 if subscan:
-    linmodel = models['lin']
     figs['subspace_optim'] = linmodel.plot_info()
-    figs['subspace_models'] = linmodel.plot_models()
+
 # plot periodicity for one realization to verify data is steady state
 figs['per'] = data3.sig.periodicity(dof=nldof)
 
