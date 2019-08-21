@@ -6,7 +6,7 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 from scipy.linalg import norm
 
 from pyvib.common import db
@@ -171,13 +171,13 @@ def identify_fnsi(data, nlx, nly, n=6, r=15, nmax=25, optimize=True, info=2):
     return fnsi1, fnsi_errvec
 
 
-def identify_linear(data, n=6, r=20, subscan=True, info=2):
+def identify_linear(data, n=6, r=20, subscan=True, info=2, weight=True):
     lin_errvec = []
     linmodel = Subspace(data.sig)
     #linmodel._cost_normalize = 1
     if subscan:
         linmodel.scan(nvec=[2, 3, 4, 5, 6, 7, 8], maxr=20,
-                      optimize=True, weight=False, info=info)
+                      optimize=True, weight=weight, info=info)
         lin_errvec = linmodel.extract_model(data.yval, data.uval)
         print(f"Best subspace model, n, r: {linmodel.n}, {linmodel.r}")
 
@@ -232,8 +232,9 @@ def partion_data(data, Rest=2, Ntr=1, Ntr_steady=1):
     y = data['y']
     u = data['u']
     lines = data['lines']
-    freq = data['freq']
+    fs = data['fs']
     npp, p, R, P = y.shape
+    freq = np.arange(npp)/npp * fs
     # partitioning the data. Use last period of two last realizations.
     # test for performance testing and val for model selection
     utest = u[:, :, -1, -1]
@@ -293,8 +294,6 @@ def load_npz(fname, dtype='nm', include_vel=True):
                  data['ud'], 'y': data['yd'], 'yd': data['ydotd']}
             # , 'yd': data['xd'][:, 3:]}
 
-    npp = d['y'].shape[0]
-    d['freq'] = np.arange(npp)/npp * d['fs']
     if include_vel:
         d['y'] = np.hstack((d['y'], d['yd'][:, -1][:, None]))
 
@@ -302,18 +301,18 @@ def load_npz(fname, dtype='nm', include_vel=True):
 
 
 def load_mat(fname):
-    d = {}
-    lines = data['lines'].squeeze()[2:-1] - 1
     # from matlab: (npp,P,R,p). We need (npp,p,R,P)
-    y = data['y'].squeeze().transpose(0, 3, 2, 1)
-    ydot = data['ydot'].squeeze().transpose(0, 3, 2, 1)
-    u = data['u'].squeeze()[..., None].transpose(0, 3, 2, 1)
-    fs = data['fs'].item()
+    data = loadmat(fname)
+    d = {'lines': data['lines'].squeeze() - 1,
+         'y': data['y'].squeeze().transpose(0, 3, 2, 1),
+         'u': data['u'].squeeze()[..., None].transpose(0, 3, 2, 1),
+         'fs': data['fs'].item()
+         }
 
     return d
 
 
-nmax = 100
+nmax = 5
 info = 1
 weight = False
 
@@ -322,23 +321,26 @@ subscan = False
 dtype = 'discrete'
 
 w = [0, 0, 0, 1]
-eps = 0.1
+eps = 0
 tahn1 = Tanhdryfriction(eps=eps, w=w)
 nlx = [tahn1]
+nlx = None
 nly = None
 
 include_vel = True
 Avec = [700]
-fs = 750
+fs = 700
 fname = 'ms'
-upsamp = 70
+upsamp = 1
 
 for A in Avec:
     print(f'A:{A}')
     # try:
     epsf = f'{eps}'.replace('.', '')
     datname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
-    raw_data = load_npz(datname, dtype=dtype, include_vel=True)
+    raw_data = load_npz(datname, dtype=dtype, include_vel=False)#True)
+    #datname = 'data/pnlss.mat'
+    #raw_data = load_mat(datname)
     # Ntr: how many transient periods in T1 for identification
     data = partion_data(raw_data, Ntr=2, Ntr_steady=1)
     plot_bla([], data, nldof)
@@ -355,7 +357,9 @@ for A in Avec:
     # plot periodicity for one realization to verify data is steady state
     figs['per'] = data.sig.periodicity(dof=nldof)
 
-    savefig('fig/nlss_eps{epsf}_{dtype}_', figs)
+    savefig(f'fig/nlss_eps{epsf}_{dtype}_', figs)
 
     # except ValueError as e:
     #    print(f'Could not load {datname}. Error {e}')
+
+    # savemat(datname[:-4] + '.mat', raw_data)

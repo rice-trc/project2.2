@@ -35,6 +35,9 @@ modal analysis, ie. either fully stuck or fully sliding.
 
 ωₙ = 19.59, 122.17, 143.11  # free
 ωₙ = 21.44, 123.34, 344.78  # stuck
+
+We need at least 2**13(8192) points per period for good identification of the
+linear system. Even if the system is sampled with more points
 """
 
 scan = False
@@ -42,9 +45,9 @@ benchmark = 4
 
 # define multisine
 f1 = 5
-f2 = 70
-npp = 2**12
-fs = 750
+f2 = 100
+npp = 2**13
+fs = 700
 if scan:
     R = 1
     P = 2
@@ -90,20 +93,22 @@ ndof = M.shape[0]
 om_fixed = data['om_fixed'].squeeze()
 om_free = data['om_free'].squeeze()
 
-eps = 0.01
+eps = 0
 wd = [0,0,0,0,0,1]
 nlx = NLS(Tanhdryfriction(eps=eps, w=wd))
+nlx = None
 nly = None
 epsf = f'{eps}'.replace('.', '')
 
 # cont time
 a, b, c, d = mkc2ss(M, K, C)
+# include velocity in output
 c = np.vstack((c ,np.hstack((np.zeros((3,3)), np.eye(3))) ))
 d = np.vstack((d, np.zeros((3,3))))
 csys = signal.StateSpace(a, b, c, d)
-Ec = np.zeros((2*ndof, 1))
+Ec = np.zeros((2*ndof, 0))
 Fc = np.zeros((2*ndof, 0))
-Ec[ndof+nldof] = -muN
+Ec[ndof+nldof] = 0 #-muN
 
 cmodel = NLSS(csys.A, csys.B, csys.C, csys.D, Ec, Fc)
 cmodel.add_nl(nlx=nlx, nly=nly)
@@ -129,16 +134,17 @@ freqc = np.arange(nppint)/nppint * fsc
 
 # convert to discrete time
 dsys = csys.to_discrete(dt=dt, method='tustin')  # tustin
-Ed = np.zeros((2*ndof, 1))
+Ed = np.zeros((2*ndof, 0))
 Fd = np.zeros((2*ndof, 0))
 # euler discretization
-Ed[ndof+nldof] = -muN*dt
+Ed[ndof+nldof] = 0 #-muN*dt
 
 dmodel = NLSS(dsys.A, dsys.B, dsys.C, dsys.D, Ed, Fd)
 dmodel.add_nl(nlx=nlx, nly=nly)
 
 # newmark
 nls = nmNLS(nmTanhdryfriction(eps=eps, w=w, kt=muN))
+nls = None
 sys = Newmark(M, C, K, nls)
 nm = False
 
@@ -147,7 +153,8 @@ ud, linesd, freqd = multisine(f1, f2, N=nppint, fs=fsint, R=R, P=P)
 fext = np.zeros((nsint, ndof))
 
 for A in Avec:
-    print(f'Discrete started with ns: {nsint}, A: {A}, R: {R}, P: {P}, upsamp: {upsamp}')
+    print(f'Discrete started with ns: {nsint}, A: {A}, R: {R}, P: {P}, '
+          f'upsamp: {upsamp}, eps:{eps}')
     # Transient: Add periods before the start of each realization. To generate
     # steady state data.
     T1 = np.r_[npp*Ntr, np.r_[0:(R-1)*P*nppint+1:P*nppint]]
@@ -204,9 +211,9 @@ if upsamp:  # > 1:
     xs = [dsample(y, upsamp) for y in xs]
     us = [u[::upsamp, :, :, 1:] for u in us]
 
-np.savez(f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz', ynm=ys[0],
-         ydotnm=ys[1], yddotnm=ys[2], yd=ys[3], ydotd=ys[4], xd=xs[0], ud=us[0],
-         linesd=linesd, fs=fs, A=A)
+fname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
+np.savez(fname, ynm=ys[0], ydotnm=ys[1], yddotnm=ys[2], yd=ys[3], ydotd=ys[4],
+         xd=xs[0], ud=us[0], linesd=linesd, fs=fs, A=A)
 
 # plt.figure()
 #plt.plot(t, x, '-k', label=r'$x_1$')
