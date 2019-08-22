@@ -46,7 +46,7 @@ benchmark = 4
 # define multisine
 f1 = 5
 f2 = 100
-npp = 2**13
+npp = 2**14
 fs = 700
 if scan:
     R = 1
@@ -93,10 +93,10 @@ ndof = M.shape[0]
 om_fixed = data['om_fixed'].squeeze()
 om_free = data['om_free'].squeeze()
 
-eps = 0
+eps = 0.1
 wd = [0,0,0,0,0,1]
 nlx = NLS(Tanhdryfriction(eps=eps, w=wd))
-nlx = None
+# nlx = None
 nly = None
 epsf = f'{eps}'.replace('.', '')
 
@@ -106,9 +106,9 @@ a, b, c, d = mkc2ss(M, K, C)
 c = np.vstack((c ,np.hstack((np.zeros((3,3)), np.eye(3))) ))
 d = np.vstack((d, np.zeros((3,3))))
 csys = signal.StateSpace(a, b, c, d)
-Ec = np.zeros((2*ndof, 0))
+Ec = np.zeros((2*ndof, 1))
 Fc = np.zeros((2*ndof, 0))
-Ec[ndof+nldof] = 0 #-muN
+Ec[ndof+nldof] = -muN
 
 cmodel = NLSS(csys.A, csys.B, csys.C, csys.D, Ec, Fc)
 cmodel.add_nl(nlx=nlx, nly=nly)
@@ -134,17 +134,17 @@ freqc = np.arange(nppint)/nppint * fsc
 
 # convert to discrete time
 dsys = csys.to_discrete(dt=dt, method='tustin')  # tustin
-Ed = np.zeros((2*ndof, 0))
+Ed = np.zeros((2*ndof, 1))
 Fd = np.zeros((2*ndof, 0))
 # euler discretization
-Ed[ndof+nldof] = 0 #-muN*dt
+Ed[ndof+nldof] = -muN*dt
 
 dmodel = NLSS(dsys.A, dsys.B, dsys.C, dsys.D, Ed, Fd)
 dmodel.add_nl(nlx=nlx, nly=nly)
 
 # newmark
 nls = nmNLS(nmTanhdryfriction(eps=eps, w=w, kt=muN))
-nls = None
+# nls = None
 sys = Newmark(M, C, K, nls)
 nm = False
 
@@ -214,6 +214,7 @@ if upsamp:  # > 1:
 fname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
 np.savez(fname, ynm=ys[0], ydotnm=ys[1], yddotnm=ys[2], yd=ys[3], ydotd=ys[4],
          xd=xs[0], ud=us[0], linesd=linesd, fs=fs, A=A)
+print(f'data saved as {fname}')
 
 # plt.figure()
 #plt.plot(t, x, '-k', label=r'$x_1$')

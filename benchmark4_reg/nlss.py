@@ -176,13 +176,13 @@ def identify_linear(data, n=6, r=20, subscan=True, info=2, weight=True):
     linmodel = Subspace(data.sig)
     #linmodel._cost_normalize = 1
     if subscan:
-        linmodel.scan(nvec=[2, 3, 4, 5, 6, 7, 8], maxr=20,
+        linmodel.scan(nvec=[6], maxr=20,
                       optimize=True, weight=weight, info=info)
         lin_errvec = linmodel.extract_model(data.yval, data.uval)
-        print(f"Best subspace model, n, r: {linmodel.n}, {linmodel.r}")
+        print(f"Best subspace model on val data, n, r: {linmodel.n}, {linmodel.r}")
 
-        linmodel.estimate(n=n, r=r, weight=weight)
-        linmodel.optimize(weight=weight, info=info)
+        #linmodel.estimate(n=n, r=r, weight=weight)
+        #linmodel.optimize(weight=weight, info=info)
     else:
         linmodel.estimate(n=n, r=r, weight=weight)
         linmodel.optimize(weight=weight, info=info)
@@ -267,7 +267,7 @@ def identify(data, nlx, nly, n, r, subscan=True):
     errvec = {}
     models = {}
     models['lin'], _ = identify_linear(
-        data, n=n, r=r, subscan=subscan, info=info)
+        data, n=n, r=r, subscan=subscan, info=info, weight=False)
     models['fnsi'], _ = identify_fnsi(
         data, nlx, nly, n=n, r=r, nmax=nmax, optimize=False, info=info)
     models['fnsi optim'], errvec['fnsi'] = identify_fnsi(
@@ -319,33 +319,34 @@ weight = False
 nldof = 2
 subscan = False
 dtype = 'discrete'
+dtype = 'nm'
 
 w = [0, 0, 0, 1]
-eps = 0
+eps = 0.01
 tahn1 = Tanhdryfriction(eps=eps, w=w)
 nlx = [tahn1]
-nlx = None
+#nlx = None
 nly = None
 
 include_vel = True
 Avec = [700]
 fs = 700
 fname = 'ms'
-upsamp = 1
+upsamp = 70
 
 for A in Avec:
     print(f'A:{A}')
     # try:
     epsf = f'{eps}'.replace('.', '')
     datname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
-    raw_data = load_npz(datname, dtype=dtype, include_vel=False)#True)
+    raw_data = load_npz(datname, dtype=dtype, include_vel=True)#True)
     #datname = 'data/pnlss.mat'
     #raw_data = load_mat(datname)
     # Ntr: how many transient periods in T1 for identification
     data = partion_data(raw_data, Ntr=2, Ntr_steady=1)
     plot_bla([], data, nldof)
 
-    models, res = identify(data, nlx, nly, n=6, r=15, subscan=subscan)
+    models, res = identify(data, nlx, nly, n=6, r=20, subscan=subscan)
     figs = disp_plot(data, res, nldof)
 
     # subspace plots
