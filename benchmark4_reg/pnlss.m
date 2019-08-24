@@ -101,8 +101,8 @@ yval = y(:,end,R-1,:); yval = reshape(yval,[],p);
 
 % All other repeats for estimation\
 Ptr = 1;
-uest = u(:,Ptr:end,1:R,:);
-yest = y(:,Ptr:end,1:R,:);
+uest = u(:,Ptr+1:end,1:R,:);
+yest = y(:,Ptr+1:end,1:R,:);
 
 % standard deviation of the generated signal
 uStd = mean(mean(std(uest)));

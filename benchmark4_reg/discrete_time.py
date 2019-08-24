@@ -12,9 +12,10 @@ from pyvib.common import db, dsample
 from pyvib.forcing import multisine, multisine_time
 from pyvib.modal import mkc2ss
 from pyvib.newmark import Newmark
-from pyvib.nlss import NLSS, dnlsim2
-from pyvib.nonlinear_elements import NLS, Tanhdryfriction
+from pyvib.nlss import NLSS, nlsim2
+from pyvib.nonlinear_elements import NLS, Polynomial, Tanhdryfriction
 from pyvib.nonlinear_elements_newmark import NLS as nmNLS
+from pyvib.nonlinear_elements_newmark import Polynomial as nmPolynomial
 from pyvib.nonlinear_elements_newmark import \
     Tanhdryfriction as nmTanhdryfriction
 
@@ -61,8 +62,10 @@ else:
     R = 2
     P = 6
     Avec = [700]
-    upsamp = 70
+    Avec = [700]
+    upsamp = 70  #70
     fname = 'ms'
+    fname = 'pol'
 
 ns = npp*R*P
 t = np.arange(ns)/fs
@@ -96,36 +99,59 @@ om_free = data['om_free'].squeeze()
 eps = 0.1
 wd = [0,0,0,0,0,1]
 nlx = NLS(Tanhdryfriction(eps=eps, w=wd))
+
+muN = 1e9
+exponent = 3
+wd = [0,0,1,0,0,0]
+wd = w
+nlx = NLS(Polynomial(exponent=exponent, w=wd))
 # nlx = None
 nly = None
 epsf = f'{eps}'.replace('.', '')
 
 # cont time
 a, b, c, d = mkc2ss(M, K, C)
+fact = 1
 # include velocity in output
-c = np.vstack((c ,np.hstack((np.zeros((3,3)), np.eye(3))) ))
-d = np.vstack((d, np.zeros((3,3))))
+if len(wd) == 6:
+    c = np.vstack((c ,np.hstack((np.zeros((3,3)), np.eye(3))) ))
+    d = np.vstack((d, np.zeros((3,3))))
+    fact = 2
 csys = signal.StateSpace(a, b, c, d)
 Ec = np.zeros((2*ndof, 1))
-Fc = np.zeros((2*ndof, 0))
+Fc = np.zeros((fact*ndof, 0))
 Ec[ndof+nldof] = -muN
 
 cmodel = NLSS(csys.A, csys.B, csys.C, csys.D, Ec, Fc)
 cmodel.add_nl(nlx=nlx, nly=nly)
 
-nhar = 500
-np.random.seed(0)
-ufunc, linesc = multisine_time(f1, f2, N=nhar)
 
-
-def fex_cont(A, t):
+def fex_cont(A, u, t):
     t = np.atleast_1d(t)
     fex = np.zeros((len(t), ndof))
-    fex[:, fdof] = A*ufunc(t)
+    fex[:, fdof] = A*u(t)
     return fex
-    # return np.vstack((np.zeros(len(t)), A*ufunc(t), np.zeros(len(t)))).T
 
 
+def simulate_cont(sys, A, t):
+    nt = len(t)
+    y = np.empty((R, nt, sys.outputs))
+    x = np.empty((R, nt, len(sys.A)))
+    u = np.empty((R, nt))
+    for r in range(R):
+        np.random.seed(r)
+        ufunc, lines = multisine_time(f1, f2, N=nhar)
+        fexc = partial(fex_cont, A, ufunc)
+
+        _, yr, xr = nlsim2(sys, fexc, t=tc)
+        y[r] = yr
+        x[r] = xr
+        u[r] = ufunc(t)
+
+    return y.reshape((R*nt, -1)), x.reshape((R*nt, -1)), u, lines
+
+
+nhar = 1000
 f0 = (f2-f1) / nhar
 t2 = P/f0
 tc = np.linspace(0, t2, nppint*P, endpoint=False)
@@ -133,17 +159,19 @@ fsc = f0*nppint
 freqc = np.arange(nppint)/nppint * fsc
 
 # convert to discrete time
-dsys = csys.to_discrete(dt=dt, method='tustin')  # tustin
+dsys = csys.to_discrete(dt=dt, method='foh')  # tustin
 Ed = np.zeros((2*ndof, 1))
-Fd = np.zeros((2*ndof, 0))
+Fd = np.zeros((fact*ndof, 0))
 # euler discretization
 Ed[ndof+nldof] = -muN*dt
 
-dmodel = NLSS(dsys.A, dsys.B, dsys.C, dsys.D, Ed, Fd)
+dmodel = NLSS(dsys.A, dsys.B, dsys.C, dsys.D, Ed, Fd, dt=dsys.dt)
 dmodel.add_nl(nlx=nlx, nly=nly)
 
 # newmark
 nls = nmNLS(nmTanhdryfriction(eps=eps, w=w, kt=muN))
+nls = nmNLS(nmPolynomial(exp=exponent, w=w, k=muN))
+
 # nls = None
 sys = Newmark(M, C, K, nls)
 nm = False
@@ -160,9 +188,7 @@ for A in Avec:
     T1 = np.r_[npp*Ntr, np.r_[0:(R-1)*P*nppint+1:P*nppint]]
     fext[:, fdof] = A*ud.ravel()
     _, yd, xd = dmodel.simulate(fext, T1=T1)
-    if R == 1:
-        fexc = partial(fex_cont, A)
-        _, yc, xc = dnlsim2(cmodel, fexc, tc)
+    yc, xc, uc, linesc = simulate_cont(cmodel, A, tc)
 
     try:
         ynm, ydnm, yddnm = sys.integrate(fext, dt, x0=None, v0=None,
@@ -175,16 +201,14 @@ for A in Avec:
     #if scan:
     # plot frf for forcing and tanh node
     Yd = np.fft.fft(yd[-nppint:, [fdof, nldof]], axis=0)
-    if R == 1:
-        Yc = np.fft.fft(yc[-nppint:, [fdof, nldof]], axis=0)
+    Yc = np.fft.fft(yc[-nppint:, [fdof, nldof]], axis=0)
     nfd = Yd.shape[0]//2
     plt.figure()
     plt.plot(freqd[:nfd], db(np.abs(Yd[:nfd])))
     if nm:
         plt.plot(freqd[:nfd], db(np.abs(Ynm[:nfd])))
         nm = False
-    if R == 1:
-        plt.plot(freqc[:nfd], db(np.abs(Yc[:nfd])))
+    plt.plot(freqc[:nfd], db(np.abs(Yc[:nfd])))
     plt.xlim([0, 50])
     plt.ylim(bottom=-150)
     plt.xlabel('Frequency (Hz)')
@@ -197,23 +221,29 @@ for A in Avec:
     plt.savefig(f'fig/dc_b{benchmark}_A{A}_eps{epsf}_fft_comp_n{fdof}.png')
 
 # We need to reshape into (npp,m,R,P)
-ys = [ynm, ydnm, yddnm, yd[:,:3], yd[:,3:]]
+if len(wd) != 6:
+    yd = np.hstack((yd,yd))
+    yc = np.hstack((yc,yc))
+ys = [ynm, ydnm, yddnm, yd[:,:3], yd[:,3:], yc[:,:3], yc[:,3:]]
 ys = [y.reshape(R, P, nppint, ndof).transpose(2, 3, 0, 1) for y in ys]
 
-xs = [xd]
+xs = [xd, xc]
 xs = [x.reshape(R, P, nppint, 2*ndof).transpose(2, 3, 0, 1) for x in xs]
 
-us = [A*ud]
+us = [A*ud, uc]
 us = [u.reshape(R, P, nppint, 1).transpose(2, 3, 0, 1) for u in us]
 
 if upsamp:  # > 1:
-    ys = [dsample(y, upsamp) for y in ys]
-    xs = [dsample(y, upsamp) for y in xs]
-    us = [u[::upsamp, :, :, 1:] for u in us]
+    ys = [dsample(y, upsamp, zero_phase=True) for y in ys]
+    xs = [dsample(y, upsamp, zero_phase=True) for y in xs]
+    us = [u[::upsamp, :, :, :] for u in us]
 
 fname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
-np.savez(fname, ynm=ys[0], ydotnm=ys[1], yddotnm=ys[2], yd=ys[3], ydotd=ys[4],
-         xd=xs[0], ud=us[0], linesd=linesd, fs=fs, A=A)
+np.savez(fname,
+         ynm=ys[0], ydotnm=ys[1], yddotnm=ys[2],
+         yd=ys[3], ydotd=ys[4], xd=xs[0], ud=us[0], linesd=linesd,
+         yc=ys[5], ydotc=ys[6], xc=xs[1], uc=us[1], linesc=linesc,
+         fs=fs, A=A, fsc=f0*npp)
 print(f'data saved as {fname}')
 
 # plt.figure()

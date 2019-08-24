@@ -14,7 +14,7 @@ from pyvib.fnsi import FNSI
 from pyvib.forcing import multisine
 from pyvib.frf import covariance
 from pyvib.nlss import NLSS
-from pyvib.nonlinear_elements import Nonlinear_Element, Pnl, Tanhdryfriction
+from pyvib.nonlinear_elements import Pnl, Polynomial, Tanhdryfriction
 from pyvib.signal import Signal
 from pyvib.subspace import Subspace
 
@@ -44,8 +44,11 @@ def plot_bla(res, data, p):
     # if the signal is noise-free, fix noise so we see it in plot
     bla_noise = db(np.sqrt(np.abs(data.sig.covGn[:, p, p])*R))
     bla_noise[bla_noise < -150] = -150
-    bla_tot = db(np.sqrt(np.abs(data.sig.covG[:, p, p])*R))
-    bla_tot[bla_tot < -150] = -150
+    try:# in case R=1
+        bla_tot = db(np.sqrt(np.abs(data.sig.covG[:, p, p])*R))
+        bla_tot[bla_tot < -150] = -150
+    except TypeError:
+        bla_tot = [np.nan]*len(lines)
 
     plt.plot(freq[lines], db(np.abs(data.sig.G[:, p, 0])))
     plt.plot(freq[lines], bla_noise, 's')
@@ -130,6 +133,27 @@ def savefig(fname, figs):
             f[0].savefig(f"{fname}{k}{i}.png")
 
 
+def physical_par(data,fnsi, iu, cr_true):
+    G, knl = fnsi.nl_coeff(iu)
+
+    cr = knl.real
+    cim = knl.imag
+    ratio =  np.log10(np.abs(cr.mean(0)/cim.mean(0)));
+    print('Ratio of the real and imaginary parts of the nonlinear coefficient (log)');
+    print(f'{ratio}')
+
+    print('Error on the nonlinear coefficient (%)')
+    print(f'{100*(cr.mean(0)-cr_true)/cr_true}')
+    
+    for coef in cr.T:
+        plt.figure()
+        plt.plot(data.freq[data.lines], coef)
+        #plt.ylim([0.9e8, 1.1e8])
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel(f'Real part of the NL coefficient (N/m^3)')
+ 
+    return knl
+
 def identify_nlss(data, linmodel, nlx, nly, nmax=25, info=2):
     Rest = data.yest.shape[2]
     T1 = np.r_[data.npp*data.Ntr, np.r_[0:(Rest-1)*data.npp+1:data.npp]]
@@ -159,7 +183,7 @@ def identify_fnsi(data, nlx, nly, n=6, r=15, nmax=25, optimize=True, info=2):
     fnsi1 = FNSI()
     fnsi1.set_signal(sig)
     fnsi1.add_nl(nlx=nlx)
-    fnsi1.estimate(n=n, r=r, weight=weight)
+    fnsi1.estimate(n=n, r=r, weight=weight, bd_method=bd_method)
     fnsi1.transient(T1=data.npp*data.Ntr)
     if optimize:
         try:
@@ -171,21 +195,22 @@ def identify_fnsi(data, nlx, nly, n=6, r=15, nmax=25, optimize=True, info=2):
     return fnsi1, fnsi_errvec
 
 
-def identify_linear(data, n=6, r=20, subscan=True, info=2, weight=True):
+def identify_linear(data, n=6, r=20, subscan=True, info=2, weight=True, optimize=True):
     lin_errvec = []
     linmodel = Subspace(data.sig)
     #linmodel._cost_normalize = 1
     if subscan:
-        linmodel.scan(nvec=[6], maxr=20,
-                      optimize=True, weight=weight, info=info)
+        linmodel.scan(nvec=[6], maxr=20, optimize=True, weight=weight,
+                      info=info, bd_method=bd_method)
         lin_errvec = linmodel.extract_model(data.yval, data.uval)
         print(f"Best subspace model on val data, n, r: {linmodel.n}, {linmodel.r}")
 
         #linmodel.estimate(n=n, r=r, weight=weight)
         #linmodel.optimize(weight=weight, info=info)
     else:
-        linmodel.estimate(n=n, r=r, weight=weight)
-        linmodel.optimize(weight=weight, info=info)
+        linmodel.estimate(n=n, r=r, weight=weight, bd_method=bd_method)
+        if optimize:
+            linmodel.optimize(weight=weight, info=info)
     return linmodel, lin_errvec
 
 
@@ -267,7 +292,7 @@ def identify(data, nlx, nly, n, r, subscan=True):
     errvec = {}
     models = {}
     models['lin'], _ = identify_linear(
-        data, n=n, r=r, subscan=subscan, info=info, weight=False)
+        data, n=n, r=r, subscan=subscan, info=info, weight=False, optimize=True)
     models['fnsi'], _ = identify_fnsi(
         data, nlx, nly, n=n, r=r, nmax=nmax, optimize=False, info=info)
     models['fnsi optim'], errvec['fnsi'] = identify_fnsi(
@@ -275,27 +300,40 @@ def identify(data, nlx, nly, n, r, subscan=True):
     models['nlss'], errvec['nlss'] = identify_nlss(
         data, models['lin'], nlx, nly, nmax=nmax, info=info)
 
-    # nly_pnl = [Pnl(degree=[2, 3, 5], structure='statesonly')]
-    # nlx_pnl = [Pnl(degree=[2, 3, 5], structure='statesonly')]
-    # models['nlss_pnl'], errvec['nlss_pnl'] = identify_nlss(
-    # data, models['lin'], nlx_pnl, nly_pnl, nmax=nmax, info=info)
+
+    nlx_pnl = [Pnl(degree=[3, 5], structure='statesonly')]
+    nly_pnl = [Pnl(degree=[3], structure='statesonly')]
+    nly_pnl = None
+    models['nlss_pnl'], errvec['nlss_pnl'] = identify_nlss(
+        data, models['lin'], nlx_pnl, nly_pnl, nmax=nmax, info=info)
     res = evaluate_models(data, models, errvec, info=info)
     return models, res
 
 
-def load_npz(fname, dtype='nm', include_vel=True):
+def load_npz(fname, stype='nm', include_vel=True):
     with np.load(fname) as data:
-        if dtype == 'nm':
+        if stype == 'nm':
             d = {'lines': data['linesd'], 'fs': data['fs'].item(), 'u':
                  data['ud'], 'y': data['ynm'], 'yd': data['ydotnm'], 'ydd':
                  data['yddotnm']}
-        elif dtype == 'discrete':
+        elif stype == 'discrete':
             d = {'lines': data['linesd'], 'fs': data['fs'].item(), 'u':
                  data['ud'], 'y': data['yd'], 'yd': data['ydotd']}
             # , 'yd': data['xd'][:, 3:]}
+        elif stype == 'cont':
+            d = {'lines': data['linesc'], 'fs': data['fsc'].item(), 'u':
+                 data['uc'], 'y': data['yc'], 'yd': data['ydotc']}
 
     if include_vel:
         d['y'] = np.hstack((d['y'], d['yd'][:, -1][:, None]))
+
+    # fmin = 5
+    # fmax = 50
+    # npp, p, R, P = d['y'].shape
+    # fs = d['fs']
+    # f1 = int(np.floor(fmin/fs * npp))
+    # f2 = int(np.ceil(fmax/fs * npp))
+    # d['lines'] = np.arange(f1+1, f2+1)
 
     return d
 
@@ -312,41 +350,74 @@ def load_mat(fname):
     return d
 
 
-nmax = 5
+
+nmax = 50
 info = 1
 weight = False
+bd_method = 'explicit'
+bd_method = 'nr'
+bd_method = 'opt'
 
 nldof = 2
 subscan = False
-dtype = 'discrete'
-dtype = 'nm'
+stype = 'discrete'
+stype = 'nm'
+#stype = 'cont'
 
+Avec = [700]
+fname = 'ms'
+upsamp = 70
 w = [0, 0, 0, 1]
-eps = 0.01
+eps = 0.1
 tahn1 = Tanhdryfriction(eps=eps, w=w)
-nlx = [tahn1]
+nlx = tahn1
+
+Avec = [700]
+fname = 'pol'
+upsamp = 70
+eps = 0.1
+w = [0,0,1]
+nlx = Polynomial(exponent=3, w=w)
+cr_true = 1e9
+
 #nlx = None
 nly = None
 
-include_vel = True
-Avec = [700]
+if len(w) == 3:
+    include_vel = False
+else:
+    include_vel = True
+
 fs = 700
-fname = 'ms'
-upsamp = 70
+
+
+# lin setting
+#upsamp = 1
+#eps = 0
 
 for A in Avec:
     print(f'A:{A}')
     # try:
     epsf = f'{eps}'.replace('.', '')
     datname = f'data/{fname}_A{A}_upsamp{upsamp}_fs{fs}_eps{epsf}.npz'
-    raw_data = load_npz(datname, dtype=dtype, include_vel=True)#True)
-    #datname = 'data/pnlss.mat'
+    raw_data = load_npz(datname, stype=stype, include_vel=include_vel)
     #raw_data = load_mat(datname)
-    # Ntr: how many transient periods in T1 for identification
-    data = partion_data(raw_data, Ntr=2, Ntr_steady=1)
-    plot_bla([], data, nldof)
+    # save for matlab
+    savemat(datname[:-4] + '.mat', raw_data)
 
-    models, res = identify(data, nlx, nly, n=6, r=20, subscan=subscan)
+    # Ntr: how many transient periods in T1 for identification
+    data = partion_data(raw_data, Ntr=2, Ntr_steady=1, Rest=2)
+    try:  # in case R=1
+        #plot_bla([], data, nldof)
+        pass
+    except TypeError:
+        pass
+
+    models, res = identify(data, nlx, nly, n=6, r=40, subscan=subscan)
+    try:
+        knl = physical_par(data, models['fnsi'],iu=0, cr_true=cr_true)
+        knl = physical_par(data, models['fnsi optim'],iu=0, cr_true=cr_true)
+    except: pass
     figs = disp_plot(data, res, nldof)
 
     # subspace plots
@@ -358,9 +429,7 @@ for A in Avec:
     # plot periodicity for one realization to verify data is steady state
     figs['per'] = data.sig.periodicity(dof=nldof)
 
-    savefig(f'fig/nlss_eps{epsf}_{dtype}_', figs)
+    savefig(f'fig/{fname}_eps{epsf}_{stype}_', figs)
 
     # except ValueError as e:
     #    print(f'Could not load {datname}. Error {e}')
-
-    # savemat(datname[:-4] + '.mat', raw_data)
