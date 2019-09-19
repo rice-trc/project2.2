@@ -10,9 +10,9 @@ figpath = './fig';
 addnoise = false;
 savefig  = true;
 
-Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
+Alevels = [0.01 0.25 0.50 0.75];
 
-PerOrNot = [true true true true true true true true true true true];  % true if periodic; false if not
+PerOrNot = [true true true true];  % true if periodic; false if not
 fs = 4096;
 % fs = 16384;
 
@@ -68,7 +68,7 @@ Y = fft(y);  Y = Y(lines, :, :, :);  % Output Spectrum at excited lines
 
 % Estimate linear state-space model (frequency domain subspace)
 % Model order
-na = 2;
+na = [2, 3];
 maxr = 20;
 % Excited frequencies (normed)
 freqs_norm = (lines-1)/Nt;
@@ -109,7 +109,7 @@ T2 = 0;
 m = size(u,2);
 p = size(y,2);
 
-nx = [2 3];
+nx = [2 3 4 5];
 ny = [];
 whichtermsx = 'statesonly';
 whichtermsy = 'empty';
@@ -137,7 +137,7 @@ W = [];
 errormeasures = cell(size(Alevels));
 seqmodels = cell(size(Alevels));
 modelguess = modellinest;
-PerOrNot(1:end) = false;
+PerOrNot([end]) = false;
 for ia=1:length(Alevels)
     load(sprintf('./data/ode45_multisine_A%.2f_F%d.mat',Alevels(ia), fs), 'u', 'y');
 
@@ -230,7 +230,6 @@ for ia=1:length(Alevels)
             modelguess.x0active = (1:modelguess.n)';
             modelguess.u0active = (1:modelguess.m)';
             [~, y_mod, models_pnlss] = fLMnlssWeighted_x0u0(uc, yc, modelguess, MaxCount, W, lambda);
-%         [~, y_mod, models_pnlss] = fLMnlssWeighted(uc, yc, modelguess, MaxCount, W, lambda);
         end
     catch 
         modelguess.E = modelguess.E*0;
@@ -279,7 +278,7 @@ for ia=1:length(Alevels)
     errormeasures{ia} = err;
     seqmodels{ia} = model;
     
-%     save(sprintf('./data/pnlssmodel_A%.2f_F%d_nx%s.mat', Alevels(ia), fs, sprintf('%d',nx)), 'model', 'err')
+    save(sprintf('./data/pnlssmodel_A%.2f_F%d_nx%s.mat', Alevels(ia), fs, sprintf('%d',nx)), 'model', 'err')
     
     fprintf('Done %d/%d\n', ia, length(Alevels))
     
@@ -299,9 +298,9 @@ for ia=1:length(Alevels)
     ylabel('Output (errors)')
     legend('output','linear error','PNLSS error')
     title('Estimation results')
-%     print(sprintf('./fig/TDOMESTRESS_PNLSS_A%.2f_F%d_nx%s.eps', Alevels(ia), fs, sprintf('%d',nx)), '-depsc')
+    print(sprintf('./fig/TDOMESTRESS_PNLSS_A%.2f_F%d_nx%s.eps', Alevels(ia), fs, sprintf('%d',nx)), '-depsc')
     disp(' ')
-    wdisp(['rms(y-y_mod) = ' num2str(rms(yc-y_mod))...
+    disp(['rms(y-y_mod) = ' num2str(rms(yc-y_mod))...
         ' (= Output error of the best PNLSS model on the estimation data)'])
     % disp(['rms(noise(:))/sqrt(P) = ' num2str(rms(noise(:))/sqrt(P)) ' (= Noise level)'])
 end

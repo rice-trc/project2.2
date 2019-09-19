@@ -10,7 +10,7 @@ addpath('../src/matlab/')
 
 %% Define system
 % Fundamental parameters
-Dmod = [.38 .12 .09 .08 .08]*.01;
+Dmod = [.38 .12 .09 .08 .08]*.03;
 Nmod = 1;
 setup = './data/New_Design_Steel';
 thickness = .001;
@@ -19,7 +19,7 @@ PHI_L2 = PHI(L/2);
 
 % Properties of the underlying linear system
 M = eye(Nmod);
-D = diag(2*Dmod(1:Nmod).*om(:));
+D = diag(2*Dmod(1:Nmod).*om(1:Nmod));
 K = diag(om.^2);
 
 % load nonlinear coefficients (can be found e.g. analytically)
@@ -51,8 +51,8 @@ fs = 1200;       % 5*f2. Must be fs>2*f2. Nyquist freq, you know:)
 N  = 1e3;         % freq points
 f0 = (f2-f1)/N;
 A = 0.01;  % Signal RMS amplitude
-Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
-for A=Alevels(end-1:end)
+Alevels = [0.01 0.25 0.50 0.75];  % 0.75: not periodic
+for A=Alevels(1:end)
     fprintf('A = %f\n', A);
     Nt = 2^13;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
     fs = Nt*f0;     % Samping frequency
@@ -112,7 +112,7 @@ for A=Alevels(end-1:end)
 
     %% show time series
     sprintf('data/ode45_multisine_A%.2f_F%d.mat',A,fs)
-
+    load(sprintf('data/ode45_multisine_A%.2f_F%d.mat',A,fs))
     r = 1;
     Y = PHI_L2*reshape(y(:,:,r,:),[],n)';
 

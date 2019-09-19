@@ -9,7 +9,7 @@ addpath('../src/nlvib_hillsexp/')
 %% Define system
 
 % Fundamental parameters
-Dmod = [.38 .12 .09 .08 .08]*.01;
+Dmod = [.38 .12 .09 .08 .08]*.03;
 Nmod = 1;
 setup = './data/New_Design_Steel';
 thickness = .001;
@@ -46,9 +46,7 @@ Om_s = 200*2*pi;      % start frequency
 Om_e = 700*2*pi;     % end frequency
 
 % Excitation levels
-% exc_lev = [10 40 60 80 100];
-exc_lev = [0.1 2.5 7.5 10 15];
-exc_lev = [1e-2 3e-2 5e-2 8e-2 1e-1];
+exc_lev = [1e-2 3e-2 1e-1 3e-1 1e0];
 X = cell(size(exc_lev));
 Sols = cell(size(exc_lev));
 HillsExps = cell(size(exc_lev));
@@ -77,12 +75,12 @@ end
 
 %% Compute frequency response of PNLSS identified model
 % N = 1e3;
-exc_lev = [1e-2 3e-2 5e-2 8e-2 1e-1];
+exc_lev = [1e-2 3e-2 1e-1 3e-1 1e0];
 % Alevels = 0.5*N*exc_lev.^2;
-Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
-nx = [3];
+Alevels = [0.01 0.25 0.50 0.75];
+nx = [3 5];
 
-for ia = 4 % 1:length(Alevels)
+for ia = 1:length(Alevels)
 Alevel = Alevels(ia);
 fs = 4096;
 load(sprintf('./data/ode45_multisine_A%.2f_F%d.mat',Alevel,fs), 'PHI_L2');
@@ -137,38 +135,44 @@ colos = distinguishable_colors(length(exc_lev));
 aa = gobjects(size(exc_lev));
 for iex=1:length(exc_lev)
     figure(10*ia)
+    plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,2), '-', 'Color', colos(iex,:)); hold on
 %     plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,2).*Sols{iex}(:,4), '-', 'Color', colos(iex,:)); hold on
 %     plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,2).*Sols{iex}(:,5), '--', 'Color', colos(iex,:)); hold on
-    plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2).*Solspnlss{iex}(:,4), '.-', 'Color', colos(iex,:)); hold on
-    plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2).*Solspnlss{iex}(:,5), '+-', 'Color', colos(iex,:)); hold on
+    plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2), '.-', 'Color', colos(iex,:)); hold on
+%     plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2).*Solspnlss{iex}(:,4), '.-', 'Color', colos(iex,:)); hold on
+%     plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2).*Solspnlss{iex}(:,5), '+-', 'Color', colos(iex,:)); hold on
     
     figure(10*ia+1)
+    aa(iex) = plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,3), '-', 'Color', colos(iex,:)); hold on
 %     aa(iex) = plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,3).*Sols{iex}(:,4), '-', 'Color', colos(iex,:)); hold on
 %     plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,3).*Sols{iex}(:,5), '--', 'Color', colos(iex,:)); hold on
-    aa(iex) = plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,3).*Solspnlss{iex}(:,4), '.-', 'Color', colos(iex,:)); hold on
-    plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,3).*Solspnlss{iex}(:,5), '+-', 'Color', colos(iex,:)); hold on
+    plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,3), '.-', 'Color', colos(iex,:)); hold on
+%     aa(iex) = plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,3).*Solspnlss{iex}(:,4), '.-', 'Color', colos(iex,:)); hold on
+%     plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,3).*Solspnlss{iex}(:,5), '+-', 'Color', colos(iex,:)); hold on
     legend(aa(iex), sprintf('F = %.2f', exc_lev(iex)));
 end
 
 figure(10*ia)
 set(gca, 'YScale', 'log')
 xlim(sort([Om_s Om_e])/2/pi)
-xlim([200 350])
-xlabel('Forcing frequency \omega (Hz)')
+xlim([200 700])
+xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('RMS response amplitude (m)')
 % savefig(sprintf('./fig/pnlssfrf_A%d_Amp.fig',Alevels(ia)))
-% print(sprintf('./fig/pnlssfrf_A%.2f_Amp_nx%s.eps',Alevels(ia),sprintf('%d',nx)), '-depsc')
+print(sprintf('./fig/pnlssfrf_A%.2f_Amp_nx%s.eps',Alevels(ia),sprintf('%d',nx)), '-depsc')
 % print('./fig/stabsol_Amp.eps', '-depsc')
-print('./fig/dtstabsol_Amp.eps', '-depsc')
+% print('./fig/dtstabsol_Amp.eps', '-depsc')
 
 figure(10*ia+1)
 xlim(sort([Om_s Om_e])/2/pi)
-xlim([200 350])
-xlabel('Forcing frequency \omega (Hz)')
+xlim([200 700])
+ylim([-180 180])
+yticks(-180:45:180)
+xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('Response phase (degs)')
 legend(aa(1:end), 'Location', 'northeast')
 % savefig(sprintf('./fig/pnlssfrf_A%d_Phase.fig',Alevels(ia)))
-% print(sprintf('./fig/pnlssfrf_A%.2f_Phase_nx%s.eps',Alevels(ia),sprintf('%d',nx)), '-depsc')
+print(sprintf('./fig/pnlssfrf_A%.2f_Phase_nx%s.eps',Alevels(ia),sprintf('%d',nx)), '-depsc')
 % print('./fig/stabsol_Phase.eps', '-depsc')
-print('./fig/dtstabsol_Phase.eps', '-depsc')
+% print('./fig/dtstabsol_Phase.eps', '-depsc')
 end

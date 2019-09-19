@@ -181,10 +181,10 @@ function active = fSelectActive(structure,n,m,q,nx)
 %       1.2 : April 20, 2016
 %           Help updated
 %
-%	Copyright (c) Vrije Universiteit Brussel – dept. ELEC
+%	Copyright (c) Vrije Universiteit Brussel ï¿½ dept. ELEC
 %   All rights reserved.
 %   Software can be used freely for non-commercial applications only.
-%   Disclaimer: This software is provided “as is” without any warranty.
+%   Disclaimer: This software is provided ï¿½as isï¿½ without any warranty.
 %
 %	See also sub2ind, ind2sub, fCombinations, fLMnlssWeighted_x0u0
 

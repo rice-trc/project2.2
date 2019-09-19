@@ -10,25 +10,25 @@ addpath(genpath(srcpath));
 %% Define system
 
 % Fundamental parameters
-Dmod = [.38 .12 .09 .08 .08]*.01;
+Dmod = [.38 .12 .09 .08 .08]*.03;
 Nmod = 1;
-setup = 'New_Design_Steel';
+setup = './data/New_Design_Steel';
 thickness = .001;
 [L,rho,E,om,PHI,~,gam] = beams_for_everyone(setup,Nmod,thickness);
-PHI_L_2 = PHI(L/2);
+PHI_L2 = PHI(L/2);
 
 % load nonlinear coefficients (can be found e.g. analytically)
-fname = ['beam_New_Design_Steel_analytical_5t_' ...
+fname = ['./data/beam_New_Design_Steel_analytical_5t_' ...
     num2str(thickness*1000) 'mm.mat'];
 [p, E] = nlcoeff(fname, Nmod);
 
 % Properties of the underlying linear system
 M = eye(Nmod);
-D = diag(2*Dmod(:).*om(:));
+D = diag(2*Dmod(1:Nmod).*om(1:Nmod));
 K = diag(om.^2);
 
 % Fundamental harmonic of external forcing
-Fex1 = gam;
+Fex1 = PHI_L2;
 
 % Define oscillator as system with polynomial stiffness nonlinearities
 oscillator = System_with_PolynomialStiffnessNonlinearity(M,D,K,p,E,Fex1);
@@ -44,10 +44,10 @@ Ntd = 1e3;
 
 % Analysis parameters
 Om_e = om(1)*.1;      % start frequency
-Om_s = 5*om(1);     % end frequency
+Om_s = 3*om(1);     % end frequency
 
 % Excitation levels
-exc_lev = [30];
+exc_lev = [1e-2 3e-2 1e-1 3e-1 1e0];
 X = cell(size(exc_lev));
 for iex=1:length(exc_lev)
     % Set excitation level
@@ -70,7 +70,7 @@ for iex=1:length(exc_lev)
     
 end
 
-% save('frf.mat','X','ds','H','Ntd','exc_lev','oscillator','n')
+save('./data/frf.mat','X','ds','H','Ntd','exc_lev','oscillator','n')
 
 %% NMA
 H=7;
@@ -102,4 +102,4 @@ Sopt    = struct('Dscale',[1e-6*ones(size(x0,1)-2,1);1;1e-1;1],...
     @(X) HB_residual(X,oscillator,H,N,analysis,inorm),...
     log10a_s,log10a_e,ds, Sopt);
 
-save('nma.mat','Solinfo','Sol','X','ds','H','n','imod')
+save('./data/nma.mat','Solinfo','Sol','X','ds','H','n','imod')

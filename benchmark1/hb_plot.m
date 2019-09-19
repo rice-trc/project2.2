@@ -5,9 +5,9 @@ srcpath = '../../nlvib/SRC';
 addpath(genpath(srcpath));
 
 %% Fundamental parameters
-Dmod = [.38 .12 .09 .08 .08]*.01;
-Nmod = 5;
-setup = 'New_Design_Steel';
+Dmod = [.38 .12 .09 .08 .08]*.03;
+Nmod = 1;
+setup = './data/New_Design_Steel';
 thickness = .001;
 [L,rho,E,om,PHI,~,gam] = beams_for_everyone(setup,Nmod,thickness);
 PHI_L2 = PHI(L/2);
@@ -23,22 +23,23 @@ set(0,'defaultTextInterpreter','latex');
 set(0, 'DefaultLegendInterpreter', 'latex'); 
 
 %% FRF
-frf = load_hb('frf.mat',Ntd,PHI_L2);
+frf = load_hb('./data/frf.mat',Ntd,PHI_L2);
 
-% % Illustrate frequency response
-% figure; hold on; box on
-% aa = gobjects(frf.nex,1);
-% for j = 1:frf.nex
-%     aa(j) = plot(frf.Om{j}/2/pi,frf.apeak{j}*1000,'k-','linewidth',1.5);
-%     legend(aa(j), sprintf('F = %.2f N', frf.exc_lev(j)));
-% end
-% legend(aa, 'Location', 'northeast')
-% xlabel('$f_{\mathrm{ex}}$ in Hz');
-% ylabel('$\hat{w}_{L/2}$ in mm');
-% title(['thickness = ' num2str(thickness*1000) 'mm']);
+% Illustrate frequency response
+figure(1); clf(); hold on; box on
+aa = gobjects(frf.nex,1);
+for j = 1:frf.nex
+    aa(j) = plot(frf.Om{j}/2/pi,frf.apeak{j}*1000,'-','linewidth',1.5);
+    legend(aa(j), sprintf('F = %.2f N', frf.exc_lev(j)));
+end
+% set(gca, 'YScale', 'log')
+legend(aa, 'Location', 'northeast')
+xlabel('$f_{\mathrm{ex}}$ in Hz');
+ylabel('$\hat{w}_{L/2}$ in mm');
+title(['thickness = ' num2str(thickness*1000) 'mm']);
 
 %% NMA
-nma = load('nma.mat');
+nma = load('./data/nma.mat');
 n = Nmod;
 
 Psi = nma.X(1:end-3,:);
@@ -67,6 +68,10 @@ end
 
 a_diff_nma= (max((w_L2_nma))-min((w_L2_nma)))/2;
 
+% Illustrate EPMC Backbone
+figure(1); hold on; box on
+plot(Om_nma/(2*pi), a_diff_nma.*1e3, 'k--')
+ylim([0 2.5])
 % % Determine total energy in the system from the displacement and velocity
 % % at t=0
 % energy = zeros(size(a_NMA));

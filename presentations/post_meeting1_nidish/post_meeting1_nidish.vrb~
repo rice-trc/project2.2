@@ -1,0 +1,25 @@
+\frametitle{Periodic Input - Non-periodic Response}
+  \framesubtitle{Training using Data With Transients}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \includegraphics[width=\linewidth]{{{figs/TDOMESTRESS_PNLSS_A0.01_F4096_nx23}}}
+    \end{column}%
+    \begin{column}{0.5\linewidth}
+      \begin{itemize}
+      \item Found routine \verb|fLMnlssWeighted_x0u0| which estimates
+        initial conditions along with parameters
+      \item This could be used to successfully train transient data
+        for the Duffing problem (see left)
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\pagebreak
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \includegraphics[width=\linewidth]{figs/pnlssfrf_A0.01_Amp_nx23}
+    \end{column}%
+    \begin{column}{0.5\linewidth}
+      \includegraphics[width=\linewidth]{figs/pnlssfrf_A0.01_Phase_nx23}
+    \end{column}
+  \end{columns}
+
