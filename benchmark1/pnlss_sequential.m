@@ -109,7 +109,7 @@ T2 = 0;
 m = size(u,2);
 p = size(y,2);
 
-nx = [2 3 4 5];
+nx = [2 3];
 ny = [];
 whichtermsx = 'statesonly';
 whichtermsy = 'empty';
