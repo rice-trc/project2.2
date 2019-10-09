@@ -22,7 +22,7 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 %% Define system
 
 % Fundamental parameters
-Dmod = .38*.01;
+Dmod = .38*.03;
 Nmod = 1;
 setup = 'New_Design_Steel';
 thickness = .001;
@@ -217,17 +217,22 @@ switch Shaker
     case 'no' % without Shaker
         
         % PLL controller
-        P = 0; % proportional gain
-        I = 50; % integrator gain
+        P = 100; % proportional gain
+        I = 500; % integrator gain
         D = 0; % derivative gain
         
-        time_interval = [0.2 10 0.2 20 0.2 30 0.2 40 0.2 50 0.2 50];
-        simin.time = zeros(1,13);
-        for i = 1:12
+%         time_interval = [0.2 10 0.2 20 0.2 30 0.2 40 0.2 50 0.2 50];
+        
+        Npoints = 100;
+        time_interval = kron(ones(1,Npoints),[0.2 10]);
+        
+        simin.time = zeros(1,length(time_interval)+1);
+        for i = 1:length(time_interval)
             simin.time(i+1) = simin.time(i)+time_interval(i);
         end
         simtime = simin.time(end);
-        simin.signals.values = 0.005*[0 3 3 10 10 25 25 60 60 100 100 160 160]';
+        simin.signals.values = 0.005*[0 kron(logspace(-1,1.8,Npoints),[1 1])]';
+        
         simin.signals.dimensions = 1;
         
         % simulation of experiment
@@ -293,6 +298,39 @@ names = [fieldnames(res_bb); fieldnames(res_damp)];
 res_NMA = cell2struct([struct2cell(res_bb); struct2cell(res_damp)], names, 1);
 
 % Compare modal characteristics for experiment and Harmonic Balance methods
+
+%% Process data for NM-ROM
+a = res_NMA.q_i;
+p2 = (res_NMA.om_i.^2-2*(res_NMA.del_i_nl.*res_NMA.om_i).^2)';
+om4 = res_NMA.om_i'.^4;
+Phi = res_NMA.Phi_tilde_i;
+Fsc = abs((abs(res_NMA.Phi_tilde_i')./a)).^2;
+mA = abs(res_NMA.Psi_tilde_i(exc_node,:))*sqrt(2);
+
+save(['../data/SimExp_shaker_' Shaker '_NMROM.mat'], 'res_NMA', 'a', 'p2', 'om4', 'Phi', 'Fsc', 'mA')
+
+%% Process data for PNLSS
+fdata = 0;
+valorest = 'est';
+if fdata~=1
+    PNLSS = opt.NMA;
+    PNLSS.periods = 20;
+    PNLSS.ppr = 1;
+    [t,u,y] = pnlss_preparing_backbone_simulation(simulation, PNLSS);
+    fdof = 'exc_node';
+    fsamp = PNLSS.Fs;
+    save(['../data/SimExp_shaker_' Shaker '_' valorest '.mat'], 't','u','y','fsamp','PNLSS');
+else
+    PNLSS = opt.NMA;
+    PNLSS.periods = 20;
+    PNLSS.ppr = 1;
+    
+    t = simulation.tvals;
+    u = simulation.Fvals;
+    y = simulation.disp;
+    fsamp = PNLSS.Fs;
+    save(['../data/SimExp_full_shaker_' Shaker '_' valorest '.mat'], 't', 'u', 'y', 'fsamp', 'PNLSS');
+end
 
 %% Modal frequency vs. amplitude
 figure(1);

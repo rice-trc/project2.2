@@ -105,7 +105,6 @@ for mm = 1:length(DOFs)
 %%%% interpolated
 
     if opt.var_step == 1
-
         for jj = 1:size(t_cell,2)
             %retrieve signals from cells
             t_orig = t_cell{jj};
@@ -195,7 +194,7 @@ for ll = 1:number_timeframes
         phase_tmp(neg_phase) = phase_tmp(neg_phase)+360; 
         phase_all_i(ii,ll) = phase_tmp; 
     end
-    % phase between 0° and 180° (at resonance 90°)
+    % phase between 0ï¿½ and 180ï¿½ (at resonance 90ï¿½)
     
 %----------------------------------------------------------------------
 % calculate Power Based Nonlinear Mode Indicator Function by Peter

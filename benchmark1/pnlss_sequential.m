@@ -94,7 +94,6 @@ for n = na
         min_err = err;
     end
 end
-min_na = na(1);
 % Select the best model
 model = models{min_na};
 [A,B,C,D] = model{:};

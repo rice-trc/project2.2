@@ -30,11 +30,11 @@ Nex = 8;
 f1 = 20;
 f2 = 100;
 df = 0.1;
-fs = 500;
+fs = 4096;
 Nfpts = (f2-f1)/df+1;
 freqs = linspace(f1, f2, Nfpts);
 har = ones(Nfpts, 1);
-famp = 2.0;
+famp = 0.5;
 %% Finite Element Model
 Ndof = Nn*3;
 Xcs  = linspace(0, len, Nn);  % X Coordinates
@@ -99,7 +99,7 @@ fricts.nel    = 1;
 
 %% Multisine Excitation
 Repeats = 4;
-for rn = 1:Repeats
+for rn = 3:Repeats
 rng(rn);
 fex.dofs  = [(Nex-1)*3+2]-3;
 fex.fval  = famp;
@@ -154,7 +154,8 @@ pars.Display = 'min';
 % Max Simulation time
 Prds = 8;
 Tmax = (Prds+1)/df;
-treq = linspace(0, Tmax, ceil(5*f2*Tmax)+1);
+% treq = linspace(0, Tmax, ceil(5*f2*Tmax)+1);
+treq = linspace(0, Tmax, ceil(fs*Tmax)+1);
 tic
 % [T, X, Z] = RK_GEN_AD(func, [0, Tmax], X0, Z0, pars);
 [T, X, Z] = RK_GEN_AD_TV(func, treq, X0, Z0, pars);
@@ -163,12 +164,10 @@ toc
 %% Saving
 Fex = fex.ffun{1}(T);
 save(sprintf('./RUN%d.mat',rn), 'T', 'X', 'Z', 'Fex', 'Prds', 'f1', 'f2', 'df', ...
-    'freqs', 'fex');
+    'freqs', 'fex', 'fs');
 end
-
+return
 %% Resave data
-fdir = 'famp20';
-
 load(sprintf('./%s/RUN1.mat',fdir), 'f2', 'df', 'Prds', 'X');
 fsamp = 5*f2;
 Nt = 5*f2/df;  % Time points per period
@@ -196,15 +195,15 @@ famp = fex.fval;
 save(sprintf('./%s/CLCLEF_MULTISINE.mat',fdir), 'u', 'y', 'ydot', 'f1', 'f2', 'df', ...
     'fsamp', 'freqs', 't', 'famp', 'fdof');
 
-
 %% Plot
-fdir = 'famp20';
+fdir = 'famp001_n';
 rn = 1;
 load(sprintf('./%s/RUN%d.mat',fdir,rn), 'T', 'X', 'Z', 'Fex', 'Prds', ...
-    'f1', 'f2', 'df', 'freqs', 'fex');
+    'f1', 'f2', 'df', 'freqs', 'fex','fsamp');
 
+Nt = 5*f2/df;  % Time points per period
 Tmax = (Prds+1)/df;
-Treq = linspace(0, Tmax, ceil(5*f2*Tmax)+1); Treq(end)=[];
+Treq = linspace(0, Tmax, ceil(fsamp*Tmax)+1); Treq(end)=[];
 Treq = Treq(1:Nt);
 Xreq = interp1(T, X, Treq);
 Freq = fex.ffun{1}(Treq);
@@ -215,12 +214,15 @@ Freqf = fft(Freq);
 Freqf = Freqf(1:(Nft/2))/(Nft/2);  Freqf(1) = Freqf(1)*2;
 dfft = df;
 
-figure(1)
+figure(2)
 clf()
-semilogy((0:(Nft/2-1))*dfft, abs(Freqf), '-'); hold on
-semilogy((0:(Nft/2-1))*dfft, abs(Xf), '-')
+semilogy((0:(Nft/2-1))*dfft, abs(Freqf)/fex.fval, 'k-'); hold on
+semilogy((0:(Nft/2-1))*dfft, abs(Xf)/fex.fval, '.'); hold on
 xlabel('Frequency (Hz)')
 ylabel('Content')
+
+xlim([20 100]);
+ylim([1e-7 1e-4])
 
 legend('Forcing (N)', 'Response (m)')
 % print(sprintf('%s_ts.eps',fdir), '-depsc')

@@ -5,12 +5,26 @@ addpath('../src/pnlss/')
 
 %% Combined data
 fchar = 'comb';
+fdir = 'famp001';
+f001 = load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdir), ...
+    'u', 'y', 'fdof', 't', 'f1', 'f2', 'df', 'freqs', 'fsamp');
+
 fdir = 'famp01';
 f01 = load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdir), ...
     'u', 'y', 'fdof', 't', 'f1', 'f2', 'df', 'freqs', 'fsamp');
+
 fdir = 'famp05';
 f05 = load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdir), ...
     'u', 'y', 'fdof', 't', 'f1', 'f2', 'df', 'freqs', 'fsamp');
+
+fdir = 'famp08';
+f08 = load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdir), ...
+    'u', 'y', 'fdof', 't', 'f1', 'f2', 'df', 'freqs', 'fsamp');
+
+fdir = 'famp20';
+f20 = load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdir), ...
+    'u', 'y', 'fdof', 't', 'f1', 'f2', 'df', 'freqs', 'fsamp');
+
 
 y = cat(3, f01.y, f05.y);
 u = cat(3, f01.u, f05.u);
@@ -167,7 +181,7 @@ fprintf('e_est_lin:\t %0.3e\t e_est_nl:\t %0.3e\n', err(1,:))
 fprintf('e_val_lin:\t %0.3e\t e_val_nl:\t %0.3e\n', err(2,:))
 fprintf('e_test_lin:\t %0.3e\t e_test_nl:\t %0.3e\n',err(3,:))
 
-save(sprintf('./pnlss%s.mat',fchar), 'modellinest', 'model')
+save(sprintf('./Data/pnlss%s.mat',fchar), 'modellinest', 'model')
 
 %% Results
 
