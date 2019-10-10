@@ -213,6 +213,7 @@ Bkb = [10.^Xbb(end,:);  % modal amplitude
     Xbb(end-1,:);  % damping factor
     atan2d(-Xbb(2*Nd+fdof,:), Xbb(Nd+fdof,:)); % phase
     (10.^Xbb(end,:)).*sqrt([1 0.5*ones(1, 2*Nh)]*Xbb(fdof:Nd:end-3,:).^2)]';
+save('./Data/NMA.mat', 'Xbb', 'Nh');
 
 %% Plotting FRF
 colos = distinguishable_colors(length(Fas), 'k');

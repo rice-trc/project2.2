@@ -28,7 +28,7 @@ Phi = Psi(1+(1:1),:)-1j*Psi(2+(1:1),:);
 Fsc = (abs(Phi'*oscillator.Fex1)./a').^2;
 mA = abs(oscillator.Fex1*a.*Phi)/sqrt(2);
 
-%% From data
+%% From simulated experiments
 load('./data/SimExp_shaker_no_NMROM.mat', 'res_NMA'); %, 'a', 'p2', 'om4', 'Phi', 'Fsc', 'mA');
 Psi = res_NMA.Phi_tilde_i;
 om = res_NMA.om_i;
@@ -71,7 +71,7 @@ for ia=[1:length(Alevels)]
             plot(om2(ris2)/2/pi, mA(ris2), '+:', 'Color', colos(iex,:));
         end
         
-        legend(aa(iex), sprintf('F = %.2f', exc_lev(iex)))
+        legend(aa(iex), sprintf('F = %.2f N', exc_lev(iex)))
 
 %         figure((ia-1)*2+2)
 %         aa(iex) = plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,3), '-', 'Color', colos(iex,:)); hold on
@@ -82,7 +82,7 @@ for ia=[1:length(Alevels)]
     xlim([200 350])
     set(gca, 'Position', [0.08 0.14 0.88 0.8])
     
-    xlabel('Forcing Frequency (Hz)')
+    xlabel('Forcing frequency (Hz)')
     ylabel('RMS response amplitude (m)')
     
 	aax=axes('position',get(gca,'position'),'visible','off');
@@ -97,7 +97,7 @@ for ia=[1:length(Alevels)]
 	plot(om2(ris2)/2/pi, mA(ris2), '+:', 'Color', colos(3,:));
     xlim([270 280]); ylim([2.5e-4 3.1e-4])
     
-    print(sprintf('./extabs_fig/fresp_comp_A%.2f_nx%s.eps', Alevels(ia), sprintf('%d',nx)), '-depsc')
+    print(sprintf('./extabs_fig/b1_fresp_comp_A%.2f_nx%s.eps', Alevels(ia), sprintf('%d',nx)), '-depsc')
     
 %     figure((ia-1)*2+2)
 %     xlim([200 400])
@@ -119,9 +119,10 @@ for ia=1:length(Alevels)
     ylabel(yy, 'pde')
     xlabel('y')
     ylabel('dy/dt')
+    box on
     title(sprintf('A = %.2f N', Alevels(ia)))
     fprintf('done %d/%d\n',ia,length(Alevels))
     
-    print(sprintf('./extabs_fig/tdata_kern_A%.2f.eps',Alevels(ia)),'-depsc')
+    print(sprintf('./extabs_fig/b1_tdata_kern_A%.2f.eps',Alevels(ia)),'-depsc')
     close(ia*10)
 end

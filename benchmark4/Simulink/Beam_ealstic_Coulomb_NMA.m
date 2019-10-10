@@ -8,12 +8,18 @@ clearvars;
 close all;
 clc;
 
-srcpath = '../../src/nlvib';
-addpath(genpath(srcpath));
-srcpath = '../../src/simulink';
-addpath(genpath(srcpath));
-srcpath = '../';
-addpath(genpath(srcpath));
+set(0,'defaultAxesTickLabelInterpreter', 'default');
+set(0,'defaultTextInterpreter','latex'); 
+set(0, 'DefaultLegendInterpreter', 'latex'); 
+
+addpath('../src/matlab/')
+addpath('../src/nlvib/SRC/')
+addpath('../src/nlvib/SRC/MechanicalSystems/')
+addpath('../src/simulink/')
+
+imod = 1;           % mode to be analyzed
+Shaker = 'no';      % 'yes', 'no'
+valorest = 'val';    % 'val', 'est'
 
 %% Define system (undamped)
 
@@ -32,12 +38,13 @@ beam = FE_EulerBernoulliBeam(len,height,thickness,E,rho,...
 n = beam.n;
 
 % Apply elastic Coulomb element at node 4 in translational direction
-nl_node = 4; % index includes clamped node
+nl_node = 4; % i                           ndex includes clamped node
 dir = 'trans';
 kt = 1.3e6; % tangential stiffness in N/m
 muN = 1;    % friction limit force in N
 add_nonlinear_attachment(beam,nl_node,dir,'elasticdryfriction',...
-    'stiffness',kt,'friction_limit_force',muN, 'ishysteretic', 1);
+    'stiffness',kt,'friction_limit_force',muN, ...
+    'ishysteretic', true);
 
 %% Modal analysis the linearized system
 
@@ -49,7 +56,7 @@ om_free = sqrt(diag(OM2));
 PHI_free = PHI_free(:,ind);
 
 % Modes for fixed contact
-K_ex = eye(length(beam.M));
+K_ex = zeros(length(beam.M));
 inl = find(beam.nonlinear_elements{1}.force_direction);
 K_ex(inl,inl) = kt;
 K_ex = beam.K + K_ex;
@@ -62,8 +69,8 @@ PHI_fixed = PHI_fixed(:,ind);
 %% Define linear modal damping
 
 % desired modal damping ratios for first two modes
-D1 = 0.008;
-D2 = 0.002;
+D1 = 8e-3;
+D2 = 2e-3;
 
 % define Rayleigh damping based on modal damping ratios
 beta = 2*(D2*om_fixed(2)-om_fixed(1)*D1)/(om_fixed(2)^2-om_fixed(1)^2);
@@ -81,17 +88,18 @@ D = cc./(2*om_fixed); % modal damping ratios
 %% Nonlinear modal analysis using harmonic balance
 analysis = 'NMA';
 
-imod = 3;           % mode to be analyzed
 Ntd = 2^10;         % number of time samples per period
-inorm = 2;          % coordinate for phase normalization
+inorm = beam.n-1;          % coordinate for phase normalization
 
 % Analysis parameters
 switch imod
     case 1
         H = 13;             % harmonic order
-        log10a_s = -5.7;    % start vibration level (log10 of modal mass)
-        log10a_e = -3;      % end vibration level (log10 of modal mass)
-        ds = .02;
+        Nhc = 2*H+1;
+        log10a_s = -7;    % start vibration level (log10 of modal mass)
+        log10a_e = -3.8;      % end vibration level (log10 of modal mass)
+        ds = .01;
+        dsmax = 0.05;
     case 2
         H = 7;             % harmonic order
         log10a_s = -7;    % start vibration level (log10 of modal mass)
@@ -109,14 +117,17 @@ end
 om = om_fixed(imod); phi = PHI_fixed(:,imod);
 Psi = zeros((2*H+1)*n,1);
 Psi(n+(1:n)) = phi;
-x0 = [Psi;om;D(1)];
+x0 = [Psi;om;D(imod)];
 
 % Solve and continue w.r.t. Om
+Dscale = [1e-1*ones(beam.n*Nhc,1); om_fixed(imod); D(imod); 1.0];
 fscl = mean(abs(beam.K*phi));
-Sopt = struct('stepmax',2000);
+Sopt = struct('jac', 'full', 'Dscale', Dscale, 'dynamicDscale', 1, ...
+    'dsmax', dsmax);
+
 X_HB = solve_and_continue(x0,...
-    @(X) HB_residual(X,beam,H,Ntd,analysis,inorm,fscl),...
-    log10a_s,log10a_e,ds,Sopt);
+    @(X) HB_residual(X,beam,H,Ntd,'nma',inorm,fscl),...
+    log10a_s,log10a_e,ds, Sopt);
 
 % Interpret solver output
 Psi_HB = X_HB(1:end-3,:);
@@ -129,8 +140,6 @@ Q_HB = Psi_HB.*repmat(a_HB,size(Psi_HB,1),1);
 Y_HB_1 = Q_HB(n+(1:n),:)-1i*Q_HB(2*n+(1:n),:);
 
 %% Setup simulated experiments
-
-Shaker = 'no'; % 'yes', 'no'
 
 exc_node = 8; % node for external excitation
 simtime = 30;   % Simulation time in seconds
@@ -199,22 +208,29 @@ l_stinger = 0.0200; %in m
 k_stinger = (E_stinger*A_stinger)/l_stinger;
 
 %% simulation of experiment
+sc = 1.0;
+switch valorest
+    case 'est'
+        sc = 1.0;
+    case 'val'
+        sc = 0.9;
+end
 
 switch Shaker
     case 'yes'
-        time_interval = [0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4];
-        simin.time = zeros(1,13);
-        for i = 1:12
+        time_interval = [0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4];
+        simin.time = zeros(1,length(time_interval)+1);
+        for i = 1:length(time_interval)
             simin.time(i+1) = simin.time(i)+time_interval(i);
         end
         simtime = simin.time(end);
         switch imod
             case 1
-                simin.signals.values = [0 0.2 0.2 0.5 0.5 0.75 0.75 1 1 2 2 3.5 3.5]';
+                simin.signals.values = sc*[0 0.02 0.02 0.05 0.05 0.1 0.1 0.2 0.2 0.4 0.4 0.5 0.5 0.6 0.6 0.7 0.7 0.8 0.8 1 1 1.2 1.2 1.3 1.3 1.5 1.5 1.8 1.8]';
             case 2
-                simin.signals.values = [0 0.2 0.2 0.5 0.5 0.75 0.75 1 1 2 2 3.5 3.5]';
+                simin.signals.values = sc*[0 0.2 0.2 0.3 0.3 0.4 0.4 0.5 0.5 0.6 0.6 0.7 0.7 0.8 0.8 1 1 2 2 3.5 3.5]';
             case 3
-                simin.signals.values = 10*[0 0.2 0.2 0.5 0.5 0.75 0.75 1 1 2 2 3.5 3.5]'; 
+                simin.signals.values = sc*10*[0 0.2 0.2 0.3 0.3 0.4 0.4 0.5 0.5 0.6 0.6 0.75 0.75 1 1 1.5 1.5 2 2 3.5 3.5]'; 
         end
         simin.signals.dimensions = 1;
         
@@ -224,23 +240,24 @@ switch Shaker
         
         disp('---------------------------------------------------')
         disp('Simulation of experiment started')
-        sim('DryElasticFriction_voltage')
+%         sim('DryElasticFriction_Shaker')
+        sim('./Simulink/DryElasticFriction_voltage')
         disp('Simulation of experiment succeeded')
         
     case 'no'
-        time_interval = [0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4];
-        simin.time = zeros(1,13);
-        for i = 1:12
+        time_interval = [0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4 0.1 4];
+        simin.time = zeros(1,length(time_interval)+1);
+        for i = 1:length(time_interval)
             simin.time(i+1) = simin.time(i)+time_interval(i);
         end
         simtime = simin.time(end);
         switch imod
             case 1
-                simin.signals.values = [0 0.05 0.05 0.1 0.1 0.25 0.25 0.3 0.3 0.4 0.4 0.6 0.6]';
+                simin.signals.values = sc*[0 0.001 0.001 0.002 0.002 0.003 0.003 0.02 0.02 0.05 0.05 0.08 0.08 0.1 0.1 0.13 0.13 0.17 0.17 0.21 0.21 0.23 0.23 0.25 0.25 0.28 0.28 0.3 0.3]';
             case 2
-                simin.signals.values = [0 0.01 0.01 0.1 0.1 0.25 0.25 0.4 0.4 0.8 0.8 1.2 1.2]';
+                simin.signals.values = sc*[0 0.01 0.01 0.15 0.15 0.25 0.25 0.35 0.35 0.5 0.5 0.8 0.8 1 1 1.2 1.2 2 2 3 3]';
             case 3
-                simin.signals.values = 5*[0 0.05 0.05 0.1 0.1 0.25 0.25 0.3 0.3 0.4 0.4 0.6 0.6]';
+                simin.signals.values = sc*5*[0 0.05 0.05 0.07 0.07 0.1 0.1 0.15 0.15 0.2 0.2 0.25 0.25 0.3 0.3 0.35 0.35 0.4 0.4 0.6 0.6]';
         end
         simin.signals.dimensions = 1;
         
@@ -250,7 +267,8 @@ switch Shaker
         
         disp('---------------------------------------------------')
         disp('Simulation of experiment started')
-        sim('DryElasticFriction_Force')
+%         sim('DryElasticFriction_No_Shaker')
+        sim('./Simulink/DryElasticFriction_Force')
         disp('Simulation of experiment succeeded')
 end
 
@@ -261,13 +279,14 @@ simulation.freqvals = exc_freq.signals.values;
 
 simulation.Signalbuilder = simin.time;
 
-
 %% Analysis of simualted measurements
 
 opt.NMA.exc_DOF = exc_node; % index of drive point
-opt.NMA.Fs = 30000; % sample frequency in Hz
 opt.NMA.var_step = 1; % 0 for constant step size, 1 for variable step size
-opt.NMA.periods = 350; % number of analyzed periods
+opt.NMA.Fs = 5000; % sample frequency in Hz
+opt.NMA.periods = 50; % number of analyzed periods
+% opt.NMA.Fs = 30000; % sample frequency in Hz
+% opt.NMA.periods = 350; % number of analyzed periods
 
 opt.NMA.n_harm = 10; % number of harmonics considered
 opt.NMA.min_harm_level = 0.015; % minimal level relative to highest peak
@@ -289,14 +308,23 @@ res_damp = nonlinear_damping( res_LMA, res_bb);
 names = [fieldnames(res_bb); fieldnames(res_damp)];
 res_NMA = cell2struct([struct2cell(res_bb); struct2cell(res_damp)], names, 1);
 
+%% Process for pnlss
+PNLSS = opt.NMA;
+PNLSS.periods = 20;
+PNLSS.ppr = 10;
+[t,u,y] = pnlss_preparing_backbone_simulation(simulation, PNLSS);
+fdof = 'exc_node';
+fsamp = opt.NMA.Fs;
+save(['Data/SimExp_shaker_' Shaker '_' valorest '.mat'], 't','u','y','fsamp','PNLSS');
+
 % Compare modal characteristics for experiment and Harmonic Balance methods
 
-% Modal frequency vs. amplitude
+%% Modal frequency vs. amplitude
 figure;
 semilogx(abs(Y_HB_1(2*(exc_node-1-1)+1,:)),om_HB/om_fixed(imod),'g-', 'LineWidth', 2);
 hold on
 semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/(res_LMA.freq(imod)*2*pi),'k.','MarkerSize',10)
-xlabel('amplitude in m'); ylabel('\omega/\omega_0')
+xlabel('Amplitude in m'); ylabel('Frequency $\omega/\omega_0$')
 legend('NMA with NLvib','simulated experiment')
 
 % Modal damping ratio vs. amplitude
@@ -304,5 +332,5 @@ figure;
 semilogx(abs(Y_HB_1(2*(exc_node-1-1)+1,:)),del_HB*1e2,'g-', 'LineWidth', 2);
 hold on
 semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),abs(res_NMA.del_i_nl)*100,'k.','MarkerSize',10)
-xlabel('amplitude in m'); ylabel('modal damping ratio in %')
+xlabel('Amplitude in m'); ylabel('modal damping ratio in \%')
 legend('NMA with NLvib','simulated experiment')
