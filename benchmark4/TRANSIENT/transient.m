@@ -35,7 +35,7 @@ fs = 4096;
 Nfpts = (f2-f1)/df+1;
 freqs = linspace(f1, f2, Nfpts);
 har = ones(Nfpts, 1);
-famp = 0.5;
+famp = 0.8;
 %% Finite Element Model
 Ndof = Nn*3;
 Xcs  = linspace(0, len, Nn);  % X Coordinates

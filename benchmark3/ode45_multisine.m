@@ -54,23 +54,24 @@ model.nlcof = struct('power', p, 'coef', E);
 upsamp = 1;  % Upsampling factor
 R  = 4;           % Realizations. (one for validation and one for testing)
 P  = 8;           % Periods, we need to ensure steady state
-mds = 2;
+mds = 1;
+for mds=[2 3 123]
 switch mds
     case 1
-        f1 = 150;          % low freq
-        f2 = 550;        % high freq
+        f1 = 250;          % low freq
+        f2 = 500;        % high freq
     case 2
-        f1 = 1400;          % low freq
-        f2 = 1500;        % high freq
+        f1 = 1350;          % low freq
+        f2 = 1600;        % high freq
     case 3
         f1 = 3400;          % low freq
-        f2 = 3700;        % high freq
+        f2 = 3650;        % high freq
     case 123
-        f1 = 200;
-        f2 = 3700;
+        f1 = [250 1350 3400];
+        f2 = [500 1600 3650];
 end
 N  = 1e3;         % freq points
-f0 = (f2-f1)/N;
+f0 = (f2(1)-f1(1))/N;
 A = 0.01;  % Signal RMS amplitude
 Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 
@@ -79,8 +80,8 @@ for A=Alevels(1:end)
 %     Nt = 2^15;      % Time per cycle  (2^13 for 4096; 2^15 for 16384)
 %     fs = Nt*f0;     % Samping frequency
     
-    fs = 2^12;
-%     fs = 2^14;
+%     fs = 2^12;
+    fs = 2^14;
     Nt = fs/f0;
 
     Ntint = Nt*upsamp;
@@ -116,7 +117,7 @@ for A=Alevels(1:end)
     MS = cell(R, 1);
     for r=1:R
         % multisine force signal
-        [fex, MS{r}] = multisine(f1, f2, N, A, [], [], r);
+        [fex, MS{r}] = multisine_multi(f1, f2, N, A, [], [], r);
 
         par = struct('M',M,'C',D,'K',K,'p',p,'E',E,'fex',fex, 'amp', Fex1);
 %         [tout,Y] = ode45(@(t,y) odesys(t,y, par), t,[q0;u0]);
@@ -201,4 +202,5 @@ for A=Alevels(1:end)
     ylabel('phase (rad)')
     title('FFT of one period of the multisine realizations')
     % export_fig('fig/multisine_freq.pdf')
+end
 end
