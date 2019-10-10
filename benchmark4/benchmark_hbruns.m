@@ -57,7 +57,7 @@ Zetas = diag(Vst'*beam.D*Vst)./(2*Dst);
 
 %% Parameters for HBM
 Nt = 2^10;
-imod = 3;  % Desired mode
+imod = 1;  % Desired mode
 
 switch imod
     case 1
@@ -115,8 +115,8 @@ end
 
 %% Harmonic Convergence based on FRF
 Hs = [1:2:40 40];
-if isfile(sprintf('HConvDat_M%d.mat',imod))
-    load(sprintf('HConvDat_M%d.mat',imod), 'PkPs', 'Errs', 'errmax', 'Nhconv', 'ihconv');
+if isfile(sprintf('Data/HConvDat_M%d.mat',imod))
+    load(sprintf('Data/HConvDat_M%d.mat',imod), 'PkPs', 'Errs', 'errmax', 'Nhconv', 'ihconv');
 else
     PkPs = zeros(length(Hs), 2);
     Sc = zeros(1, 3);
@@ -149,7 +149,7 @@ else
     ihconv = find(max(Errs,[],2)<=errmax, 1 );
     Nhconv = Hs(ihconv);
 
-    save(sprintf('HConvDat_M%d.mat',imod), 'PkPs', 'Errs', 'errmax', 'Nhconv', 'ihconv')
+    save(sprintf('Data/HConvDat_M%d.mat',imod), 'PkPs', 'Errs', 'errmax', 'Nhconv', 'ihconv')
 end
 %% Plotting Harmonic Convergence
 figure(100)
@@ -247,8 +247,8 @@ for k=1:length(Fas)
 %     phi2 = php(ris2)+atan2d(-2*zts(ris2).*oms(ris2).*om2(ris2), oms(ris2).^2-om2(ris2).^2);
 
 % Have to be offsetted by -180 degrees for mode 1
-    phi1 = rad2deg(angle(phf(ris1)./((oms(ris1).^2-om1(ris1).^2)+1j*(2*zts(ris1).*oms(ris1).*om1(ris1)))));
-    phi2 = rad2deg(angle(phf(ris2)./((oms(ris2).^2-om2(ris2).^2)+1j*(2*zts(ris2).*oms(ris2).*om2(ris2)))));
+    phi1 = rad2deg(angle(phf(ris1)./((oms(ris1).^2-om1(ris1).^2)+1j*(2*zts(ris1).*oms(ris1).*om1(ris1)))))-180;
+    phi2 = rad2deg(angle(phf(ris2)./((oms(ris2).^2-om2(ris2).^2)+1j*(2*zts(ris2).*oms(ris2).*om2(ris2)))))-180;
     
     figure(1)
     semilogy(Sols{k}(:,1)/2/pi, Sols{k}(:,2), '-', 'LineWidth', 2, 'Color', colos(k,:)); hold on
@@ -258,9 +258,9 @@ for k=1:length(Fas)
     semilogy(om1(ris1(ivs))/2/pi, mAmps(ris1(ivs)), '.', 'Color', colos(k,:), 'MarkerSize', 20)
     ivs = fix(linspace(1, length(ris2), livs));
     semilogy(om2(ris2(ivs))/2/pi, mAmps(ris2(ivs)), '.', 'Color', colos(k,:), 'MarkerSize', 20)
-	if k==3
-        semilogy(Pks(k,1)/2/pi, Pks(k,2), 'k.', 'MarkerSize', 30)
-    end
+% 	if k==3
+%         semilogy(Pks(k,1)/2/pi, Pks(k,2), 'k.', 'MarkerSize', 30)
+%     end
     
     figure(2)
     aa(k) = plot(Sols{k}(:,1)/2/pi, Sols{k}(:,3), '-', 'LineWidth', 2, 'Color', colos(k,:)); hold on
@@ -271,9 +271,9 @@ for k=1:length(Fas)
     plot(om1(ris1(ivs))/2/pi, phi1(ivs), '.', 'Color', colos(k,:), 'MarkerSize', 20)
     ivs = fix(linspace(1, length(ris2), livs));
     plot(om2(ris2(ivs))/2/pi, phi2(ivs), '.', 'Color', colos(k,:), 'MarkerSize', 20)
-	if k==3
-        plot(Pks(k,1)/2/pi, -90, 'k.', 'MarkerSize', 30)
-    end
+% 	if k==3
+%         plot(Pks(k,1)/2/pi, -90, 'k.', 'MarkerSize', 30)
+%     end
 end
 figure(1)
 xlabel('Forcing Frequency $\omega$ (Hz)')

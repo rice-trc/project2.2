@@ -72,8 +72,15 @@ Zetas_req = 8e-3*ones(beam.n,1);
 beam.D = inv(Vst')*diag(2*Dst.*Zetas_req)*inv(Vst);
 
 n = size(beam.M,1);
+
+%% HCB Reduction
+[Mhcb, Khcb, Thcb] = HCBREDUCE(beam.M, beam.K, (Nnl-2)*2+1, 3);
+beam_hcb = struct('M', Mhcb, 'K', Khcb, 'L', beam.L*Thcb, 'n', size(Khcb,1), ...
+    'D', Thcb'*beam.D*Thcb, 'Fex1', Thcb'*beam.Fex1, 'nonlinear_elements', {beam.nonlinear_elements});
+beam_hcb.nonlinear_elements{1}.force_direction = Thcb'*beam.nonlinear_elements{1}.force_direction;
+
 %% multisine, using time domain formulation
-exc_lev = [1,5,10,15,30];
+exc_lev = [1,5,10,15,30,60,120,240];
 f1 = 10;
 f2 = 100;
 N = 1e3;
@@ -84,7 +91,7 @@ R  = 5;            % Realizations. (one for validation and one for testing)
 P  = 10;           % Periods, we need to ensure steady state
 
 Ntint = Nt*upsamp;  % Upsampled points per cycle
-f0 = (f2-f1)/N;     % frequency resolution -> smaller -> better
+f0 = (f2-f1)/N;     % frequenzeros(2*beam_hcb.n,1)cy resolution -> smaller -> better
 fs = Nt*f0;         % downsampled Sampling frequency
 fsint = Ntint*f0;
 
@@ -104,8 +111,8 @@ if upsamp > 1
 end
 Pint = P + Pfilter;
 
-q0   = zeros(n,1);
-u0   = zeros(n,1);
+q0   = zeros(beam.n,1);
+u0   = zeros(beam.n,1);
 t1   = 0;
 t2   = Pint/f0;
 t = linspace(t1, P/f0, Nt*P+1);  t(end) = [];
@@ -117,7 +124,7 @@ nt = length(t);          % total number of points
 
 fprintf(['running ms benchmark:%d. R:%d, P:%d, Nt_int:%d, fs_int:%g, ',...
     ' f0:%g, upsamp:%d\n'],benchmark,R,P,Ntint,fsint,f0,upsamp);
-for A = exc_lev
+for A = exc_lev(end)
 fprintf('##### A: %g\n',A);
 u = zeros(Nt,P,R);
 y = zeros(Nt,P,R,n);
@@ -131,9 +138,13 @@ for r=1:R
     % multisine force signal
     [fex, MS{r}] = multisine(f1, f2, N, A, [], [], r);
     beam.Fex1 = Fex1*A;
-    [tout,Y] = ode45(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
-    % Y = ode8(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
- 
+%     [tout,Y] = ode45(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
+%     Y = ode8(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
+tic
+%     [tout,Y] = ode45(@(t,y) odesys(t,y, fex, beam_hcb), tint,zeros(2*beam_hcb.n,1));
+    Yhcb = ode8(@(t,y) odesys(t,y, fex, beam_hcb), tint,zeros(2*beam_hcb.n,1));
+    Y = Yhcb*blkdiag(Thcb', Thcb');
+toc
     % no need to downsample u. Just use the downsampled time vector
     u(:,:,r) = reshape(fex(t), [Nt,P]);
     if upsamp > 1

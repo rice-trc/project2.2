@@ -77,7 +77,7 @@ for rr = 1:Nmod
 end
 
 % Fundamental harmonic of external forcing
-Fex1 = gam;
+Fex1 = PHI_L_2';
 
 % Define oscillator as system with polynomial stiffness nonlinearities
 oscillator = System_with_PolynomialStiffnessNonlinearity(M,D,K,p,E,Fex1);
@@ -99,6 +99,7 @@ Om_e = 3*om(1);       % end frequency
 
 % Excitation levels
 exc_lev = [10,40,60,80,100];
+exc_lev = [1e-2 3e-2 5e-2 8e-2 1e-1];
 Om = cell(size(exc_lev));
 for iex=1:length(exc_lev)
     % Set excitation level
@@ -148,7 +149,7 @@ PHI_lin = PHI_lin(:,ind);
 analysis = 'NMA';
 
 imod = 1;           % mode to be analyzed
-log10a_s = -5;    % start vibration level (log10 of modal mass)
+log10a_s = -10;    % start vibration level (log10 of modal mass)
 log10a_e = -3.2;       % end vibration level (log10 of modal mass)
 inorm = 1;          % coordinate for phase normalization
 

@@ -55,8 +55,6 @@ lines = linesMin:linesMax;
 
 har = zeros(linesMax,1);
 har(lines) = 1;
-% convert lines to 1-index for using with fft-output.
-lines = lines + 1;
 % remove DC line
 lines(lines==1) = [];
 
@@ -65,6 +63,9 @@ phase = 2*pi*rand(linesMax,1);
 
 phase = phase(lines-1);
 fex = @(t) A*sum(cos(2*pi*f0*lines'.*t(:)' + phase))/sqrt(length(lines)/2);
+
+% convert lines to 1-index for using with fft-output.
+lines = lines + 1;
 
 ms.phase = phase;
 ms.lines = lines;

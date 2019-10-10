@@ -15,13 +15,13 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 % Fundamental parameters
 Dmod = [.38 .12 .12 .08 .08]*.01;
 Nmod = 5;
-setup = 'New_Design_Steel';
+setup = './data/New_Design_Steel';
 thickness = .001;
 [L,rho,E,om,PHI,~,gam] = beams_for_everyone(setup,Nmod,thickness);
 PHI_L_2 = PHI(L/2);
 
 % load nonlinear coefficients (can be found e.g. analytically)
-load(['beam_New_Design_Steel_analytical_5t_' num2str(thickness*1000) 'mm.mat'])
+load(['./data/beam_New_Design_Steel_analytical_5t_' num2str(thickness*1000) 'mm.mat'])
 model.b=b;
 
 % Properties of the underlying linear system
@@ -77,7 +77,7 @@ for rr = 1:Nmod
 end
 
 % Fundamental harmonic of external forcing
-Fex1 = gam;
+Fex1 = PHI_L_2;
 
 % Define oscillator as system with polynomial stiffness nonlinearities
 oscillator = System_with_PolynomialStiffnessNonlinearity(M,D,K,p,E,Fex1);

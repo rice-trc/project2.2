@@ -30,6 +30,7 @@ muN = 1;
 add_nonlinear_attachment(beam, Nnl, dir, 'elasticdryfriction', ...
     'stiffness', kt, 'friction_limit_force', muN, ...
     'ishysteretic', true);
+
 Nd = size(beam.M, 1);
 %% Linearized limit cases
 % Slipped
@@ -144,20 +145,29 @@ for k=1:length(Fas)
     Pks(k, :) = interp1(Sols{k}(is,3), Sols{k}(is,1:2), -90, 'pchip');
 end
 
+save('./Data/Fresp.mat', 'Sols', 'Fas', 'Ws', 'We', 'beam')
+
 %% PNLSS
-Alevel = '05';
-load(sprintf('./TRANSIENT/famp%s/CLCLEF_MULTISINE.mat',Alevel), 'fsamp')
-Alevel = 'comb';
-load(sprintf('./pnlss%s.mat', Alevel),'model');
+fdirs = {'famp001','famp01','famp05','famp08','famp20'}
+% fdirs = {'famp001_n','famp01_n','famp05_n','famp08_n','famp20_n'}
+
+% Alevel = 'comb';
+% load(sprintf('./pnlss%s.mat', Alevel),'model');
+nx = [2 3];
+
+for ia=1:length(fdirs)
+load(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat', fdirs{ia}, sprintf('%d',nx)), 'model', 'fsamp');
 
 Ndpnlss = size(model.A,1);
 
+Nh = 5;
+Nt = 2^11;
 % Forcing vector
 Uc = zeros(Nh+1, 1);
 Uc(2) = 1;
 
-Wstart = Ws;
-Wend = We;
+Wstart = We;
+Wend = Ws;
 
 Xpnlss = cell(size(Fas));
 Solspnlss = cell(size(Fas));
@@ -175,9 +185,11 @@ for iex=1:length(Fas)
     TYPICAL_xd = 0.5*(Wstart+Wend)*TYPICAL_x;
     TYPICAL_z = TYPICAL_x;
     Dscale = [repmat([TYPICAL_x; TYPICAL_xd; TYPICAL_z], 2*Nh+1, 1); (Wstart+Wend)/2];
+    
+%     Dscale = [mean(abs(Xc))*ones(length(X0),1);Wstart];
     ds = 100;
-    Sopt = struct('ds',ds,'dsmin',ds/5,'dsmax',ds*5,'flag',1,'stepadapt',1, ...
-            'predictor','tangent','parametrization','arc_length', ...
+    Sopt = struct('ds',ds,'dsmin',ds/5,'dsmax',ds*5,'flag',1,'stepadapt',0, ...
+            'predictor','tangent','parametrization','normal', ...
             'Dscale',Dscale,'jac','full', 'dynamicDscale', 1,...
             'stepmax', 10000);
     
@@ -188,14 +200,44 @@ for iex=1:length(Fas)
             mhbm_post_amplitude_pnlss(varargin{:}, Uc*Fas(iex), model.C,...
             model.D, zeros(1,length(model.E)), model.xpowers, Nh,Nt)};
     fun_postprocess = @(Y) mhbm_postprocess(Y, fun_residual, ...
-        Cfun_postprocess);
-
-    [Xpnlss{iex},~,Sol] = solve_and_continue(X0, fun_residual,...
-        Wstart, Wend, ds, Sopt, fun_postprocess);
+        Cfun_postprocess,Nh,model.n,fsamp);
+    
+%     [Xpnlss{iex},~,Sol] = solve_and_continue(X0, fun_residual,...
+%         Wstart, Wend, ds, Sopt, fun_postprocess, Solopt);
+    try
+        [Xpnlss{iex},~,Sol] = solve_and_continue_17(X0, fun_residual,...
+            Wstart, Wend, ds, Sopt, fun_postprocess);
+    catch
+        try
+            [Xpnlss{iex},~,Sol] = solve_and_continue_17(X0, fun_residual,...
+                Wend, Wstart, ds, Sopt, fun_postprocess);
+        catch
+            disp('not poss');
+        end
+    end
+%     if sign(Wend-Wstart)*Xpnlss{iex}(end)<sign(Wend-Wstart)*Wend
+%         Wstart = Wend-Wstart;
+%         Wend = Wend-Wstart;
+%         Wstart = Wend+Wstart;
+%         [tmpXpnlss,~,tmpSol] = solve_and_continue_17(X0, fun_residual,...
+%             Wstart, Wend, ds, Sopt, fun_postprocess, Solopt);
+%         Wstart = Wend-Wstart;
+%         Wend = Wend-Wstart;
+%         Wstart = Wend+Wstart;
+%         
+%         Sol = [Sol(1:size(Xpnlss{iex},2)) tmpSol(1:size(tmpXpnlss,2))];
+%         Xpnlss{iex} = [Xpnlss{iex} tmpXpnlss];
+%         [~, si] = sort(Xpnlss{iex}(end,:));
+%         Xpnlss{iex} = Xpnlss{iex}(:,si);
+%         Sol = Sol(si);
+%     end
     Solspnlss{iex} = [Xpnlss{iex}(end,:)' [Sol.Apv]' [Sol.Aph1]'];
 end
-
+save(sprintf('./Data/pnlssfresp_%s_F%d_nx%s.mat',fdirs{ia},fsamp,sprintf('%d',nx)), 'Xpnlss', 'Solspnlss');
 %% Plot
+% ia = 5;
+% load(sprintf('./Data/pnlssfresp_%s_F%d_nx%s.mat',fdirs{ia},fsamp,sprintf('%d',nx)), 'Solspnlss');
+
 fg1 = 10;
 fg2 = 20;
 
@@ -221,8 +263,8 @@ figure(fg1)
 xlim(sort([Ws We])/2/pi)
 xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('RMS response amplitude (m)')
-savefig(sprintf('./FIGURES/pnlssfrf_A%s_Amp.fig',Alevel))
-print(sprintf('./FIGURES/pnlssfrf_A%s_Amp.eps',Alevel), '-depsc')
+% savefig(sprintf('./FIGURES/pnlssfrf_A%s_Amp.fig',Alevel))
+% print(sprintf('./FIGURES/pnlssfrf_A%s_Amp.eps',Alevel), '-depsc')
 
 figure(fg2)
 xlim(sort([Ws We])/2/pi)
@@ -230,5 +272,8 @@ ylim([-180 0])
 xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('Response phase (degs)')
 legend(aa(1:end), 'Location', 'northeast')
-savefig(sprintf('./FIGURES/pnlssfrf_A%s_Phase.fig',Alevel))
-print(sprintf('./FIGURES/pnlssfrf_A%s_Phase.eps',Alevel), '-depsc')
+% savefig(sprintf('./FIGURES/pnlssfrf_A%s_Phase.fig',Alevel))
+% print(sprintf('./FIGURES/pnlssfrf_A%s_Phase.eps',Alevel), '-depsc')
+
+sound(yg.y)
+end

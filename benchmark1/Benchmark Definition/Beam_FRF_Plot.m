@@ -20,7 +20,7 @@ end
 
 xlabel('Forcing Frequency $\omega$ (Hz)')
 ylabel('Response phase (degs)')
-legend('Fex = 10','Fex = 40','Fex = 60','Fex = 80','Fex = 100',...
+legend('Fex = 0.01','Fex = 0.03','Fex = 0.05','Fex = 0.08','Fex = 0.1',...
     'Location','E');
 hold off
 
@@ -41,7 +41,7 @@ ylabel('RMS Response Displacement Amplitude (m)')
 xlim([100 650])
 
 plot(om_HB/2/pi,abs(a_w_L_2_NMA),'--k','linewidth',2)
-legend('Fex = 10','Fex = 40','Fex = 60','Fex = 80','Fex = 100','EPMC',...
+legend('Fex = 0.01','Fex = 0.03','Fex = 0.05','Fex = 0.08','Fex = 0.1','EPMC',...
     'Location','E');
 hold off
 
@@ -69,7 +69,7 @@ colos = distinguishable_colors(length(exc_lev));
 livs = 10;
 for k=1:length(exc_lev)
     aa(k+1) = semilogy(Om{k}/(2*pi), a_w_L_2{k}, ...
-        '-', 'LineWidth', 2, 'Color', colos(k,:)); hold on
+        '-', 'LineWidth', 1, 'Color', colos(k,:)); hold on
 end
 for k=1:length(exc_lev)
     om1 = sqrt(p2 + sqrt(p2.^2-om4+Fsc*exc_lev(k)^2));
@@ -87,12 +87,13 @@ for k=1:length(exc_lev)
     semilogy(om2(ris2(ivs))/(2*pi), mAmps(ris2(ivs)), 'o', ...
         'Color', colos(k,:), 'MarkerFaceColor', colos(k,:)); hold on
 end
-
-legend('Fex = 10','Fex = 40','Fex = 60','Fex = 80','Fex = 100',...
-    'Location','E');
+exc_lev = [1e-2 3e-2 5e-2 8e-2 1e-1];
+legend('Fex = 0.01','Fex = 0.03','Fex = 0.05','Fex = 0.08','Fex = 0.1',...
+    'Location','northwest');
 xlabel('Forcing Frequency $\omega$ (Hz)')
 ylabel('RMS Response Displacement Amplitude (m)')
-xlim([100 650])
+xlim([200 350])
+set(gca, 'YScale', 'linear')
 hold off
 
 %% Illustrate Synthesized Phase Diagram
@@ -133,6 +134,6 @@ for k=1:length(exc_lev)
 end
 xlabel('Forcing Frequency $\omega$ (Hz)')
 ylabel('Response phase (degs)')
-legend('Fex = 10','Fex = 40','Fex = 60','Fex = 80','Fex = 100',...
+legend('Fex = 0.01','Fex = 0.03','Fex = 0.05','Fex = 0.08','Fex = 0.1',...
     'Location','E');
 hold off

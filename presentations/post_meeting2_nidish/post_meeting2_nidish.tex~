@@ -1,0 +1,19 @@
+\documentclass[aspectratio=169]{beamer}
+
+\useoutertheme{infolines}
+
+\usepackage{graphicx}
+
+\title{PNLSS Identification}
+\subtitle{Post Institute Meeting 1}
+\author[Balaji, N. N.]{Nidish Narayanaa Balaji}
+\institute[Rice U.]{Rice University, Houston, TX 77005}
+\date{September 19, 2019}
+\begin{document}
+\maketitle{}
+
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

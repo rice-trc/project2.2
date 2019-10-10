@@ -3,10 +3,9 @@ clear all
 addpath('../src/matlab/')
 
 %% Histograms
-% Alevels=[10 50 100 1000 10000 100000];
-Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
+Alevels = [0.01 0.25 0.50 0.75];
 fs = 4096;
-sp = [3 2];
+sp = [2 2];
 
 figure(1)
 clf()
@@ -55,9 +54,8 @@ print('./fig/Response_Hists.eps', '-depsc')
 
 figure(3)
 clf()
-Alevels = [0.01 0.05 0.10 0.15 0.20 0.25];
 fs = 4096;
-sp = [3 2];
+sp = [2 2];
 for i=1:length(Alevels)
     load(sprintf('./data/ode45_multisine_A%.2f_F%d.mat',Alevels(i),fs), 'y', 'ydot');
     

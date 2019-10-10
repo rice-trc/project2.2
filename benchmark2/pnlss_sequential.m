@@ -65,6 +65,9 @@ covY = fCovarY(y);  % Noise covariance (frequency domain)
 
 lines = MS{1}.lines;
 lines(lines==1) = [];
+%lines = lines(1:end-2)+1;
+lines(1) = [];
+lines(end) = [];
 U = fft(u);  U = U(lines, :, :, :);  % Input Spectrum at excited lines
 Y = fft(y);  Y = Y(lines, :, :, :);  % Output Spectrum at excited lines
 
@@ -73,7 +76,7 @@ Y = fft(y);  Y = Y(lines, :, :, :);  % Output Spectrum at excited lines
 % Estimate linear state-space model (frequency domain subspace)
 % Model order
 if mds>1
-    na = [2, 3, 4, 5, 6, 7, 8];
+    na = [2, 4, 6, 8];
 else
     na = [2];
 end
@@ -82,8 +85,19 @@ maxr = 20;
 freqs_norm = (lines-1)/Nt;
 
 % covGML
-models = fLoopSubSpace(freqs_norm, G, covGML, na, maxr, 100);
+warning('off','all')
+[models, hfig, data] = fLoopSubSpace(freqs_norm, G, covGML, na, maxr, 100);
+% Cost function of optimized subspace models. Show log for better scaling
+disp(log(data.KLMs))
+% cost function of stable models after optimization
+KLMs = data.KLMs .* (data.unstablesLM == 0);
+disp(log(KLMs))
 
+% NB. CHANGE OF VAL DATA
+uc = mean(u, 4);
+yc = mean(y, 4);
+uval = uc(:);
+yval = yc(:);
 % Extract linear state-space matrices from best model on validation data
 Nval = length(uval);
 tval = (0:Nval-1)/fs;
@@ -93,6 +107,7 @@ for n = na
     model = models{n};
     A = model{1}; B = model{2}; C = model{3}; D = model{4};
     [A,B,C] = dbalreal(A,B,C);  % Balance realizations
+    %yval_hat = lsim(ss(A,B,C,D,1/fs), uval, tval);
     yval_hat = lsim(ss(A,B,C,D,1/fs), uval, tval);
 
     err = yval - yval_hat; 
@@ -141,10 +156,10 @@ modellintest = model; modellintest.T1 = 0;
 W = [];  
 
 %% Sequential PNLSS
-errormeasures = cell(size(Alevels));
-seqmodels = cell(size(Alevels));
-modelguess = modellinest;
-for ia=1:length(Alevels)
+% errormeasures = cell(size(Alevels));
+% seqmodels = cell(size(Alevels));
+% modelguess = modellinest;
+for ia=2:length(Alevels)
     load(sprintf('./data/ode45_multisine_A%.2f_F%d_mds%d.mat',Alevels(ia), fs, mds), 'u', 'y');
 
     [Nt, P, R, n] = size(y);

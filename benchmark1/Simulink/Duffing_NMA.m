@@ -22,7 +22,7 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 %% Define system
 
 % Fundamental parameters
-Dmod = .38*.01;
+Dmod = .38*.03;
 Nmod = 1;
 setup = 'New_Design_Steel';
 thickness = .001;
@@ -145,7 +145,7 @@ a_w_L_2_NMA = sqrt([1 0.5*ones(1,2*H)]*w_L_2_NMA_sum.^2); % compute amplitude
 
 %% Setup simulated experiments
 
-Shaker = 'yes'; % 'yes', 'no'
+Shaker = 'no'; % 'yes', 'no'
 exc_node = 1; % node for external excitation
  % Simulation time in seconds
 phase_lag = 90; % phase lag in degree
@@ -217,17 +217,22 @@ switch Shaker
     case 'no' % without Shaker
         
         % PLL controller
-        P = 0; % proportional gain
-        I = 50; % integrator gain
+        P = 100; % proportional gain
+        I = 500; % integrator gain
         D = 0; % derivative gain
         
-        time_interval = [0.2 10 0.2 20 0.2 30 0.2 40 0.2 50 0.2 50];
-        simin.time = zeros(1,13);
-        for i = 1:12
+%         time_interval = [0.2 10 0.2 20 0.2 30 0.2 40 0.2 50 0.2 50];
+        
+        Npoints = 100;
+        time_interval = kron(ones(1,Npoints),[0.2 10]);
+        
+        simin.time = zeros(1,length(time_interval)+1);
+        for i = 1:length(time_interval)
             simin.time(i+1) = simin.time(i)+time_interval(i);
         end
         simtime = simin.time(end);
-        simin.signals.values = 0.005*[0 3 3 10 10 25 25 60 60 100 100 160 160]';
+        simin.signals.values = 0.005*[0 kron(logspace(-1,1.8,Npoints),[1 1])]';
+        
         simin.signals.dimensions = 1;
         
         % simulation of experiment
@@ -294,18 +299,58 @@ res_NMA = cell2struct([struct2cell(res_bb); struct2cell(res_damp)], names, 1);
 
 % Compare modal characteristics for experiment and Harmonic Balance methods
 
-% Modal frequency vs. amplitude
-figure;
-semilogx(abs(Y_HB_1)*PHI_L_2,om_HB/om_lin(imod),'g-', 'LineWidth', 2);
+%% Process data for NM-ROM
+a = res_NMA.q_i;
+p2 = (res_NMA.om_i.^2-2*(res_NMA.del_i_nl.*res_NMA.om_i).^2)';
+om4 = res_NMA.om_i'.^4;
+Phi = res_NMA.Phi_tilde_i;
+Fsc = abs((abs(res_NMA.Phi_tilde_i')./a)).^2;
+mA = abs(res_NMA.Psi_tilde_i(exc_node,:))*sqrt(2);
+
+save(['../data/SimExp_shaker_' Shaker '_NMROM.mat'], 'res_NMA', 'a', 'p2', 'om4', 'Phi', 'Fsc', 'mA')
+
+%% Process data for PNLSS
+fdata = 0;
+valorest = 'est';
+if fdata~=1
+    PNLSS = opt.NMA;
+    PNLSS.periods = 20;
+    PNLSS.ppr = 1;
+    [t,u,y] = pnlss_preparing_backbone_simulation(simulation, PNLSS);
+    fdof = 'exc_node';
+    fsamp = PNLSS.Fs;
+    save(['../data/SimExp_shaker_' Shaker '_' valorest '.mat'], 't','u','y','fsamp','PNLSS');
+else
+    PNLSS = opt.NMA;
+    PNLSS.periods = 20;
+    PNLSS.ppr = 1;
+    
+    t = simulation.tvals;
+    u = simulation.Fvals;
+    y = simulation.disp;
+    fsamp = PNLSS.Fs;
+    save(['../data/SimExp_full_shaker_' Shaker '_' valorest '.mat'], 't', 'u', 'y', 'fsamp', 'PNLSS');
+end
+
+%% Modal frequency vs. amplitude
+figure(1);
+clf()
+% semilogx(abs(Y_HB_1)*PHI_L_2,om_HB/om_lin(imod),'k-', 'LineWidth', 2);
+% hold on
+% semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/(res_LMA.freq(1)*2*pi),'k.','MarkerSize',20)
+% xlabel('amplitude in m'); ylabel('$\omega/\omega_0$')
+semilogx(abs(Y_HB_1)*PHI_L_2,om_HB/2/pi,'k-', 'LineWidth', 2);
 hold on
-semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/(res_LMA.freq(1)*2*pi),'k.','MarkerSize',10)
-xlabel('amplitude in m'); ylabel('$\omega/\omega_0$')
+semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/2/pi,'k.','MarkerSize',20)
+% set(gca, 'XScale', 'linear')
+xlabel('amplitude (m)'); ylabel('Natural Frequency $\omega$ (Hz)')
 legend('NMA with NLvib','simulated experiment')
 
 % Modal damping ratio vs. amplitude
-figure; 
-semilogx(abs(Y_HB_1)*PHI_L_2,del_HB*1e2,'g-', 'LineWidth', 2);
+figure(2); 
+clf()
+semilogx(abs(Y_HB_1)*PHI_L_2,del_HB*1e2,'k-', 'LineWidth', 2);
 hold on
-semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),abs(res_NMA.del_i_nl)*1e2*PHI_L_2^2,'k.','MarkerSize',10)
+semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),abs(res_NMA.del_i_nl)*1e2*PHI_L_2^2,'k.','MarkerSize',20)
 xlabel('amplitude in m'); ylabel('modal damping ratio in %')
 legend('NMA with NLvib','simulated experiment')

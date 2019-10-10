@@ -8,7 +8,7 @@ function Sol = HB_hillsexp_nlvib(Y, fun_residual, M, C, Nh, Nd)
     % Solving quadratic eigenvalue problem for hills' exponents
     Sol.hillsexps = polyeig(Ktil(:,1:end-1), Ctil, Mtil);
 %     Sol.hillsexps = polyeig(Ktil(1:Nd,1:Nd), Ctil(1:Nd,1:Nd), Mtil(1:Nd,1:Nd));
-    [~, si] = sort(abs(Sol.hillsexps));
+    [~, si] = sort(imag(Sol.hillsexps));
     Sol.hillsexps = Sol.hillsexps(si(1:2*Nd));
     
 

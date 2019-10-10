@@ -1,0 +1,7 @@
+\documentclass[9pt]{beamer}
+
+\useoutertheme{infolines}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

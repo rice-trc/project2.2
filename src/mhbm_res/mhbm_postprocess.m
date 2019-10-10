@@ -23,7 +23,7 @@ if contains(func2str(fun_residual),'pnlss')
     Sol.mapmults = eig(Dlmx'*Ktil);
     lam = log(Sol.mapmults)*fs;
 %     lam = -log(eig(dR_dX(1:d,1:d)))*fs;  % Using only 0 harmonics
-    [~, si] = sort(abs(lam));
+    [~, si] = sort(imag(lam));
     Sol.hillsexps = lam(si(1:d));
     Sol.mapmults = Sol.mapmults(si(1:d));
 %     Sol.hillsexps = lam(si(1:end));
