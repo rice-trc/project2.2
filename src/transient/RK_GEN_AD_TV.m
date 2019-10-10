@@ -105,7 +105,7 @@ function [time, y, z] = RK_GEN_AD_TV(func, tvec, IC, ICz, pars)
                 time(n+1) = time(n)+dt;
                 n = n+1;
                 if strcmp(pars.Display,'min')
-                    fprintf("t=%e/%f n=%d/%d\n", time(n), tvec(end), n, length(tvec));
+                    fprintf('t=%e/%f n=%d/%d\n', time(n), tvec(end), n, length(tvec));
                 end
             else
                 y(n, :) = y(n, :) + dt*b*k;

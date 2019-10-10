@@ -30,11 +30,11 @@ Nex = 8;
 f1 = 20;
 f2 = 100;
 df = 0.1;
-fs = 500;
+fs = 4096;
 Nfpts = (f2-f1)/df+1;
 freqs = linspace(f1, f2, Nfpts);
 har = ones(Nfpts, 1);
-famp = 2.0;
+famp = 0.8;
 %% Finite Element Model
 Ndof = Nn*3;
 Xcs  = linspace(0, len, Nn);  % X Coordinates
@@ -154,7 +154,8 @@ pars.Display = 'min';
 % Max Simulation time
 Prds = 8;
 Tmax = (Prds+1)/df;
-treq = linspace(0, Tmax, ceil(5*f2*Tmax)+1);
+% treq = linspace(0, Tmax, ceil(5*f2*Tmax)+1);
+treq = linspace(0, Tmax, ceil(fs*Tmax)+1);
 tic
 % [T, X, Z] = RK_GEN_AD(func, [0, Tmax], X0, Z0, pars);
 [T, X, Z] = RK_GEN_AD_TV(func, treq, X0, Z0, pars);
@@ -165,7 +166,7 @@ Fex = fex.ffun{1}(T);
 save(sprintf('./RUN%d.mat',rn), 'T', 'X', 'Z', 'Fex', 'Prds', 'f1', 'f2', 'df', ...
     'freqs', 'fex');
 end
-
+return
 %% Resave data
 fdir = 'famp20';
 
