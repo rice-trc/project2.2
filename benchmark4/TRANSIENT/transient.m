@@ -4,6 +4,7 @@ clear all
 % addpath('../../../../RESEARCH/ANALYSES/ROUTINES/TRANSIENT/')
 addpath('../../src/nlvib/SRC/MechanicalSystems/')
 addpath('../../src/transient/')
+addpath('../../src/matlab/')
 
 %% System Properties
 len = 0.70;
@@ -99,7 +100,7 @@ fricts.nel    = 1;
 
 %% Multisine Excitation
 Repeats = 4;
-for rn = 3:Repeats
+for rn = 1:Repeats
 rng(rn);
 fex.dofs  = [(Nex-1)*3+2]-3;
 fex.fval  = famp;
@@ -168,9 +169,10 @@ save(sprintf('./RUN%d.mat',rn), 'T', 'X', 'Z', 'Fex', 'Prds', 'f1', 'f2', 'df', 
 end
 return
 %% Resave data
-load(sprintf('./%s/RUN1.mat',fdir), 'f2', 'df', 'Prds', 'X');
-fsamp = 5*f2;
-Nt = 5*f2/df;  % Time points per period
+fdir = 'famp20_n';
+load(sprintf('./%s/RUN1.mat',fdir), 'f2', 'df', 'Prds', 'X','fs');
+fsamp = fs;
+Nt = fsamp/df;  % Time points per period
 Nd = size(X,2)/2;   % Number of dynamical DOFs
 u = zeros(Nt, Prds, Repeats);
 y = zeros(Nt, Prds, Repeats, Nd);
@@ -180,33 +182,31 @@ for rn=1:Repeats
     load(sprintf('./%s/RUN%d.mat',fdir,rn), 'T', 'X', 'Z', 'Fex', 'Prds', ...
         'f1', 'f2', 'df', 'freqs', 'fex');
     Tmax = (Prds+1)/df;
-    Treq = linspace(0, Tmax, ceil(5*f2*Tmax)+1); Treq(end)=[];
+    Treq = linspace(0, Tmax, ceil(fsamp*Tmax)+1); Treq(end)=[];
     Xreq = interp1(T, X, Treq);
 
     u(:, :, rn) = reshape(fex.ffun{1}(Treq(Nt+1:end)), Nt, Prds);
     y(:, :, rn, :) = reshape(Xreq(Nt+1:end, 1:Nd), Nt, Prds, Nd);
     ydot(:, :, rn, :) = reshape(Xreq(Nt+1:end, Nd+(1:Nd)), Nt, Prds, Nd);
 end
-disp('Done!');
 
 t = Treq(1:(Prds*Nt));
 fdof = fex.dofs;
 famp = fex.fval;
 save(sprintf('./%s/CLCLEF_MULTISINE.mat',fdir), 'u', 'y', 'ydot', 'f1', 'f2', 'df', ...
     'fsamp', 'freqs', 't', 'famp', 'fdof');
-
+disp('Done!');
 %% Plot
 fdir = 'famp001_n';
 rn = 1;
 load(sprintf('./%s/RUN%d.mat',fdir,rn), 'T', 'X', 'Z', 'Fex', 'Prds', ...
-    'f1', 'f2', 'df', 'freqs', 'fex','fsamp');
+    'f1', 'f2', 'df', 'freqs', 'fex','fs');
 
-Nt = 5*f2/df;  % Time points per period
+Nt = fs/df;  % Time points per period
 Tmax = (Prds+1)/df;
-Treq = linspace(0, Tmax, ceil(fsamp*Tmax)+1); Treq(end)=[];
-Treq = Treq(1:Nt);
+Treq = linspace(0, Tmax, ceil(fs*Tmax)+1); Treq(end)=[];
 Xreq = interp1(T, X, Treq);
-Freq = fex.ffun{1}(Treq);
+Freq = fex.ffun{1}(Treq(1:Nt));
 
 Nft = length(Freq);
 Xf = fft(Xreq(1:Nt,fex.dofs));  Xf = Xf(1:(Nft/2))/(Nft/2);  Xf(1) = Xf(1)*2;
@@ -214,15 +214,28 @@ Freqf = fft(Freq);
 Freqf = Freqf(1:(Nft/2))/(Nft/2);  Freqf(1) = Freqf(1)*2;
 dfft = df;
 
-figure(2)
+figure(1)
 clf()
 semilogy((0:(Nft/2-1))*dfft, abs(Freqf)/fex.fval, 'k-'); hold on
 semilogy((0:(Nft/2-1))*dfft, abs(Xf)/fex.fval, '.'); hold on
 xlabel('Frequency (Hz)')
 ylabel('Content')
 
-xlim([20 100]);
-ylim([1e-7 1e-4])
+xlim([0 f2*4]);
+% ylim([1e-7 1e-4])
 
+figure(2)
+clf()
+plot(Treq, Xreq(:,fex.dofs), 'k.-')
+h1 = vline(Treq((1:Prds)*Nt), '--g')
+h2 = vline(Treq((1:1)*Nt*Prds), '--g'); set([h1 h2], 'LineWidth',0.5)
+
+figure(3)
+clf()
+Yp = reshape(Xreq(1:Nt*Prds,fex.dofs), [Nt, Prds]);
+per = (Yp(:,1:end)-Yp(:,end))/rms(Yp(:,1));
+plot(Treq(1:Nt*Prds), db(per(:)), 'k-');
+h1 = vline(Treq((1:Prds)*Nt), '--g')
+h2 = vline(Treq((1:1)*Nt*Prds), '--g'); set([h1 h2], 'LineWidth',0.5)
 legend('Forcing (N)', 'Response (m)')
 % print(sprintf('%s_ts.eps',fdir), '-depsc')

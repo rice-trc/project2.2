@@ -13,7 +13,8 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 addnoise = false;
 savefig = false;
 
-fdirs = {'famp001','famp01','famp05','famp08','famp20'}
+% fdirs = {'famp001','famp01','famp05','famp08','famp20'}
+fdirs = {'famp001_n','famp01_n','famp05_n','famp08_n','famp20_n'}
 
 %% BLA with lowest forcing
 load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdirs{1}), ...
@@ -131,7 +132,7 @@ W = [];
 errormeasures = cell(size(fdirs));
 seqmodels = cell(size(fdirs));
 modelguess = modellinest;
-for ia=1:length(fdirs)
+for ia=2 %1:length(fdirs)
     load(sprintf('./TRANSIENT/%s/CLCLEF_MULTISINE.mat',fdirs{ia}), ...
         't', 'u', 'y', 'fdof', 'fsamp');
     
@@ -217,7 +218,7 @@ for ia=1:length(fdirs)
 	errormeasures{ia} = err;
     seqmodels{ia} = model;
     
-    save(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat', fdirs{ia}, sprintf('%d',nx)), 'model', 'err');
+    save(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat', fdirs{ia}, sprintf('%d',nx)), 'model', 'err', 'fsamp');
     fprintf('Done %d/%d\n', ia, length(fdirs))
     
     % Plot
