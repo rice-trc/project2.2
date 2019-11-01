@@ -12,14 +12,14 @@ set(0,'defaultAxesTickLabelInterpreter', 'default');
 set(0,'defaultTextInterpreter','latex'); 
 set(0, 'DefaultLegendInterpreter', 'latex'); 
 
-addpath('../src/matlab/')
-addpath('../src/nlvib/SRC/')
-addpath('../src/nlvib/SRC/MechanicalSystems/')
-addpath('../src/simulink/')
+addpath('../../src/matlab/')
+addpath('../../src/nlvib/SRC/')
+addpath('../../src/nlvib/SRC/MechanicalSystems/')
+addpath('../../src/simulink/')
 
 imod = 1;           % mode to be analyzed
 Shaker = 'no';      % 'yes', 'no'
-valorest = 'val';    % 'val', 'est'
+valorest = 'est';    % 'val', 'est'
 fdata = 1;  % full data (no selection of periodic portions and the rest)
 
 %% Define system (undamped)
@@ -231,7 +231,7 @@ simulation.Signalbuilder = simin.time;
 opt.NMA.exc_DOF = exc_node; % index of drive point
 opt.NMA.var_step = 1; % 0 for constant step size, 1 for variable step size
 opt.NMA.Fs = 5000; % sample frequency in Hz
-opt.NMA.periods = 50; % number of analyzed periods
+opt.NMA.periods = 100; % number of analyzed periods
 % opt.NMA.Fs = 30000; % sample frequency in Hz
 % opt.NMA.periods = 350; % number of analyzed periods
 

@@ -35,7 +35,7 @@ fs = 500;
 Nfpts = (f2-f1)/df+1;
 freqs = linspace(f1, f2, Nfpts);
 har = ones(Nfpts, 1);
-famp = 0.10;
+famp = 0.01;
 %% Finite Element Model
 Ndof = Nn*3;
 Xcs  = linspace(0, len, Nn);  % X Coordinates
@@ -169,7 +169,7 @@ save(sprintf('./RUN%d.mat',rn), 'T', 'X', 'Z', 'Fex', 'Prds', 'f1', 'f2', 'df', 
 end
 return
 %% Resave data
-fdir = 'famp20_n';
+fdir = 'famp05_t';
 load(sprintf('./%s/RUN1.mat',fdir), 'f2', 'df', 'Prds', 'X','fs');
 fsamp = fs;
 Nt = fsamp/df;  % Time points per period
@@ -197,7 +197,7 @@ save(sprintf('./%s/CLCLEF_MULTISINE.mat',fdir), 'u', 'y', 'ydot', 'f1', 'f2', 'd
     'fsamp', 'freqs', 't', 'famp', 'fdof');
 disp('Done!');
 %% Plot
-fdir = 'famp001_n';
+fdir = 'famp05_t';
 rn = 1;
 load(sprintf('./%s/RUN%d.mat',fdir,rn), 'T', 'X', 'Z', 'Fex', 'Prds', ...
     'f1', 'f2', 'df', 'freqs', 'fex','fs');

@@ -154,9 +154,14 @@ fdirs = {'famp001','famp01','famp05','famp08','famp20'}
 % Alevel = 'comb';
 % load(sprintf('./pnlss%s.mat', Alevel),'model');
 nx = [2 3];
+pll = 1;
 
-for ia=1:length(fdirs)
-load(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat', fdirs{ia}, sprintf('%d',nx)), 'model', 'fsamp');
+for ia=3:length(fdirs)
+    if ~pll
+        load(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat', fdirs{ia}, sprintf('%d',nx)), 'model', 'fsamp');
+    else
+        load(sprintf('./Data/pnlss_pll_%s_nx%s.mat', fdirs{ia}, sprintf('%d',nx)), 'model', 'fsamp');
+    end
 
 Ndpnlss = size(model.A,1);
 
@@ -166,11 +171,11 @@ Nt = 2^11;
 Uc = zeros(Nh+1, 1);
 Uc(2) = 1;
 
-Wstart = We;
-Wend = Ws;
+Wstart = Ws;
+Wend = We;
 
 Xpnlss = cell(size(Fas));
-Solspnlss = cell(size(Fas));
+Solspnlss = cell(size(Fas));save(sprintf('./Data/pnlss_pll_fresp_F%d_%s_nx%s.mat',fsamp,fdirs{ia},sprintf('%d',nx)), 'Xpnlss', 'Solspnlss');
 for iex=1:length(Fas)
     Xc = (exp(1i*Wstart/fsamp)*eye(size(model.A))-model.A)\(model.B*Fas(iex));
     
@@ -233,13 +238,17 @@ for iex=1:length(Fas)
 %     end
     Solspnlss{iex} = [Xpnlss{iex}(end,:)' [Sol.Apv]' [Sol.Aph1]'];
 end
-save(sprintf('./Data/pnlssfresp_%s_F%d_nx%s.mat',fdirs{ia},fsamp,sprintf('%d',nx)), 'Xpnlss', 'Solspnlss');
+if ~pll
+    save(sprintf('./Data/pnlssfresp_%s_F%d_nx%s.mat',fdirs{ia},fsamp,sprintf('%d',nx)), 'Xpnlss', 'Solspnlss');
+else
+    save(sprintf('./Data/pnlss_pll_fresp_F%d_%s_nx%s.mat',fsamp,fdirs{ia},sprintf('%d',nx)), 'Xpnlss', 'Solspnlss');
+end
 %% Plot
 % ia = 5;
 % load(sprintf('./Data/pnlssfresp_%s_F%d_nx%s.mat',fdirs{ia},fsamp,sprintf('%d',nx)), 'Solspnlss');
 
-fg1 = 10;
-fg2 = 20;
+fg1 = 20;
+fg2 = 30;
 
 figure(fg1)
 clf()
@@ -260,14 +269,14 @@ for iex=1:length(Fas)
 end
 
 figure(fg1)
-xlim(sort([Ws We])/2/pi)
+% xlim(sort([Ws We])/2/pi)
 xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('RMS response amplitude (m)')
 % savefig(sprintf('./FIGURES/pnlssfrf_A%s_Amp.fig',Alevel))
 % print(sprintf('./FIGURES/pnlssfrf_A%s_Amp.eps',Alevel), '-depsc')
 
 figure(fg2)
-xlim(sort([Ws We])/2/pi)
+% xlim(sort([Ws We])/2/pi)
 ylim([-180 0])
 xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('Response phase (degs)')
@@ -275,5 +284,9 @@ legend(aa(1:end), 'Location', 'northeast')
 % savefig(sprintf('./FIGURES/pnlssfrf_A%s_Phase.fig',Alevel))
 % print(sprintf('./FIGURES/pnlssfrf_A%s_Phase.eps',Alevel), '-depsc')
 
-sound(yg.y)
+% sound(yg.y)
+
+% if pll
+%     break;
+% end
 end

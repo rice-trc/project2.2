@@ -11,6 +11,9 @@ set(0, 'DefaultLegendInterpreter', 'latex');
 addnoise = false;
 savefig = false;
 
+la = load('./TRANSIENT/famp001/CLCLEF_MULTISINE.mat','t','u','y','fdof','f1','f2','df','freqs','fsamp');
+la.y = la.y(:,:,:,la.fdof);
+
 Shaker = 'no';
 full = 1;
 if ~full
@@ -19,69 +22,44 @@ if ~full
 
     val = load(['Data/SimExp_shaker_' Shaker '_est.mat'], 't','u','y','fsamp');
     val.y = val.y(:,:,:,PNLSS.eval_DOF);
-else
-    Npoints = 6e4;
     
+    % Undersampling
+    fsamp = fsamp/10;
+    y = y(1:10:end,:,:);
+    u = u(1:10:end,:,:);
+    t = t(1:10:end,:,:);
+    
+    val.fsamp = val.fsamp/10;
+    val.y = val.y(1:10:end,:,:);
+    val.u = val.u(1:10:end,:,:);
+    val.t = val.t(1:10:end,:,:);
+else    
     load(['Data/SimExp_full_shaker_' Shaker '_est.mat'], 't','u','y','fsamp','PNLSS');
     y = y(:,PNLSS.eval_DOF);
     
-    t = t(fix(linspace(1,end,Npoints)));
-    y = y(fix(linspace(1,end,Npoints)));
-    u = y(fix(linspace(1,end,Npoints)));
-
+	% Undersampling
+    fsamp = la.fsamp;
+    y = interp1(t, y, (0:1/fsamp:t(end))');
+    u = interp1(t, u, (0:1/fsamp:t(end))');
+    t = (0:1/fsamp:t(end))';
+    
     val = load(['Data/SimExp_full_shaker_' Shaker '_est.mat'], 't','u','y','fsamp');
     val.y = val.y(:,PNLSS.eval_DOF);    
     
-    val.t = val.t(fix(linspace(1,end,Npoints)));
-    val.y = val.y(fix(linspace(1,end,Npoints)));
-    val.u = val.u(fix(linspace(1,end,Npoints)));
+    val.fsamp = la.fsamp;
+    val.y = interp1(val.t, val.y, (0:1/fsamp:val.t(end))');
+    val.u = interp1(val.t, val.u, (0:1/fsamp:val.t(end))');
+    val.t = (0:1/fsamp:val.t(end))';
 end
-%% BLA
+
+fdirs = {'famp001','famp01','famp05','famp08','famp20'};
+famps = [0.01, 0.1, 0.5, 0.8, 2.0];
+fia = 1;
+for fia=1:length(fdirs)
+%% PNLSS
 [Nt, P, R, n] = size(y);
 
-% %% Add colored noise to the output if required
-rng(10)
-if addnoise
-    noise = 1e-3 *std(est.y(:,end,end))*randn(size(est.y));
-    
-    noise(1:end-1,:,:) = noise(1:end-1,:,:) + noise(2:end,:,:);
-    est.y = est.y+noise;
-end
-
-% Separate data
-utest = u(:, end, end);   utest = utest(:);
-ytest = y(:, end, end, :); ytest = ytest(:);
-
-uval = val.u(:,end,:); uval = uval(:);
-yval = val.y(:,end,:,:); yval = yval(:);
-
-% Stdev
-uStd = mean(mean(std(u)));
-
-% m: number of inputs, p: number of outputs
-u = permute(u, [1,4,3,2]); % N x m x R x P
-y = permute(y, [1,4,3,2]); % N x p x R x P
-covY = fCovarY(y);  % Noise covariance (frequency domain)
-
-lines = 1:floor(Nt/2);
-U = fft(u);  U = U(lines, :, :, :);
-Y = fft(y);  Y = Y(lines, :, :, :);
-
-[G, covGML, covGn] = fCovarFrf(U, Y);
-
-na = 3;
-maxr = 20;
-freqs_norm = (lines-1)/Nt;
-
-models = fLoopSubSpace(freqs_norm, G, covGML, na, maxr, 100);
-
-% No validation
-model = models{3};
-[A,B,C,D] = model{:};
-[A,B,C] = dbalreal(A,B,C);
-
-%% PNLSS
-MaxCount = 10;
+MaxCount = 100;
 lambda = 100;
 
 m = size(u,2);
@@ -92,19 +70,31 @@ T1 = [0];
 % T2 = [Nt];
 
 % Data Periodic
-% T1 = [Nt ((1:R)-1)*Nt+1];
+% T1 = [(Nt-1)/4 ((1:R)-1)*Nt+1];
 T2 = [];
 
-nx = [2 3 4 5];
+nx = [2 3];
 ny = [];
 whichtermsx = 'statesonly';
 whichtermsy = 'empty';
 
-modelguess = fCreateNLSSmodel(A,B,C,D, nx, ny, T1, T2);
+load(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat',fdirs{fia},sprintf('%d',nx)), 'model');
+modelguess = model;
+modelguess.T1 = T1;
+modelguess.T2 = T2;
 modelguess.xactive = fSelectActive(whichtermsx, 3, m, 3, nx);
 modelguess.xactive = fSelectActive(whichtermsx, 3, m, p, ny);
 W = [];
 
+% INITIAL GUESS ON E
+% modelguess.E = rand(size(modelguess.E))*0;
+% ---------
+
+if ~full
+    tc = t+permute(t(2)*size(t,1)*(0:13), [1, 3, 2]); tc = tc(:);
+else
+    tc = t(:);
+end
 uc = u(:);
 yc = y(:);
 
@@ -117,11 +107,46 @@ err_linest = yc-y_linest;
 
 y_linval = fFilterNLSS(modelguess, uc_v);
 err_linval = yc_v-y_linval;
+me=[];
+try
+    [~, y_mod, models_pnlss] = fLMnlssWeighted(uc, yc, modelguess, MaxCount, W, lambda);
 
-% [~, y_mod, models_pnlss] = fLMnlssWeighted(uc, yc, modelguess, MaxCount, W, lambda);
+    % modelguess.x0active = (1:modelguess.n)';
+    % modelguess.u0active = (1:modelguess.m)';
+    % [~, y_mod, models_pnlss] = fLMnlssWeighted_x0u0(uc, yc, modelguess, MaxCount, W, lambda);
+catch me
+    modelguess.E = rand(size(modelguess.E))*0.1;
+    
+    [~, y_mod, models_pnlss] = fLMnlssWeighted(uc, yc, modelguess, MaxCount, W, lambda);
+end
 
-modelguess.x0active = (1:modelguess.n)';
-modelguess.u0active = (1:modelguess.m)';
-[~, y_mod, models_pnlss] = fLMnlssWeighted_x0u0(uc, yc, modelguess, MaxCount, W, lambda);
+% Choose best model from PNLSS (using validation data)
+valerrs = [];
+for i=1:length(models_pnlss)        
+    yval_mod = fFilterNLSS(models_pnlss(i), uc_v);
+	valerr = yc_v - yval_mod;
+	valerrs = [valerrs; rms(valerr)];
+end
 
+[min_valerr, i] = min(valerrs);
+model = models_pnlss(i);
+
+y_mod = fFilterNLSS(model, uc);
 err_nlest = yc-y_mod;
+
+save(sprintf('./Data/pnlss_pll_%s_nx%s.mat', fdirs{fia}, sprintf('%d',nx)), 'model', 'fsamp');
+% %%
+figure(10); clf()
+plot(tc, yc); hold on
+plot(tc, y_mod, ':'); hold on
+if isempty(me)
+    plot(tc, y_linest, ':');
+end
+xlabel('Time (s)')
+ylabel('Displacement y')
+ylim([-1 1]*2e-5)
+
+print(sprintf('./FIGURES/TDOMPERF_PNLSS_PLL_%s_nx%s.eps',fdirs{fia},sprintf('%d',nx)), '-depsc');
+% plot(err_linest)
+% plot(tc, err_nlest)
+end

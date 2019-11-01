@@ -47,15 +47,22 @@ mA = abs(a.*Phi(res_NMA.options.eval_DOF))/sqrt(2);
 aa = gobjects(size(Fas));
 bb = gobjects(3,1);
 
+pll = 1;
+
 factive = 1:length(Fas);
 % factive = [1 2 3 4 6];
 
 colos = distinguishable_colors(length(Fas));
 for ia=1:length(fdirs)
-    load(sprintf('./Data/pnlssfresp_%s_F500_nx%s.mat',fdirs{ia},sprintf('%d',nx)), 'Solspnlss');
+    if ~pll
+        load(sprintf('./Data/pnlssfresp_%s_F500_nx%s.mat',fdirs{ia},sprintf('%d',nx)), 'Solspnlss');
+    else
+        load(sprintf('./Data/pnlss_pll_fresp_F%d_%s_nx%s.mat',500,fdirs{ia},sprintf('%d',nx)), 'Solspnlss');
+    end
     
     figure((ia-1)*2+1)
     clf()
+    factive = 1:length(Solspnlss);
     for iex=factive
         om1 = sqrt(p2 + sqrt(p2.^2-om4+Fsc*Fas(iex)^2));   ris1 = find(imag(om1)==0);
         om2 = sqrt(p2 - sqrt(p2.^2-om4+Fsc*Fas(iex)^2));   ris2 = find(imag(om2)==0);
@@ -92,7 +99,11 @@ for ia=1:length(fdirs)
 	aax=axes('position',get(gca,'position'),'visible','off');
     legend(aax, bb(1:3), 'Location', 'northwest');
     
-    print(sprintf('./extabs_fig/b4_fresp_comp_%s_nx%s.eps',fdirs{ia},sprintf('%d',nx)), '-depsc')
+    if ~pll
+        print(sprintf('./extabs_fig/b4_fresp_comp_%s_nx%s.eps',fdirs{ia},sprintf('%d',nx)), '-depsc')
+    else
+        print(sprintf('./extabs_fig/b4_fresp_comp_pll_%s_nx%s.eps',fdirs{ia},sprintf('%d',nx)), '-depsc')
+    end
 end
 
 %% Looking at Time Data (used to train PNLSS)

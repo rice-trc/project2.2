@@ -126,3 +126,42 @@ for ia=1:length(Alevels)
     print(sprintf('./extabs_fig/b1_tdata_kern_A%.2f.eps',Alevels(ia)),'-depsc')
     close(ia*10)
 end
+
+%% Time data in frequency domain
+figure(10)
+clf()
+aa = gobjects(size(Alevels));
+bb = gobjects(2,1);
+colos = distinguishable_colors(length(Alevels));
+for ia=1:length(Alevels)
+    load(sprintf('./data/ode45_multisine_A%.2f_F%d.mat',Alevels(ia), fs))
+    
+    y = y(:,end,1);
+    u = u(:,end,1);
+    t = t(1:length(y));
+    
+    [freqs, yf] = FFTFUN(t', y);
+    [freqs, uf] = FFTFUN(t', u);
+    
+    aa(ia) = semilogy(freqs, abs(yf), '.', 'Color', colos(ia,:)); hold on
+    legend(aa(ia), sprintf('A = %.2f N', Alevels(ia)));
+    
+    if ia==4
+        bb(1) = semilogy(freqs, abs(uf), '-', 'Color', colos(ia,:)); hold on
+        bb(2) = semilogy(freqs, abs(yf), '.', 'Color', colos(ia,:)); hold on
+        
+        legend(bb(1:2), 'Excitation (N)', 'Response (m)')
+    else
+        semilogy(freqs, abs(uf), '-', 'Color', colos(ia,:)); hold on
+    end
+end
+legend(aa(1:end), 'Location', 'east')
+xlim([100 1100])
+ylim([1e-10 1e-1])
+xlabel('Frequency (Hz)')
+ylabel('Frequency content amplitude')
+
+aax=axes('position',get(gca,'position'),'visible','off');
+legend(aax, bb(1:2), 'Location', 'northeast');
+
+print('./extabs_fig/b1_tdata_freqcont.eps', '-depsc')

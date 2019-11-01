@@ -1,0 +1,11 @@
+\documentclass[aspectratio=169]{beamer}
+
+\useoutertheme{infolines}
+
+\usepackage{graphicx}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
