@@ -204,6 +204,30 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Shift in Natural Frequency of Underlying Linear Systems}
+  \framesubtitle{Comparison between linear part of PNLSS model
+    identified from Multi-sine data and PLL data} 
+
+  \begin{table}[!h]
+    \centering
+    \begin{tabular}{ccc}
+      \hline\hline
+      Multisine & PNLSS from & PNLSS from PLL data\\
+      Amplitude (N) & Multisine data (MSPNLSS) & initialized with MSPNLSS \\
+      \hline
+      0.01 & 62.0921 Hz & 62.1493 Hz \\
+      0.10 & 62.2387 Hz & 62.1510 Hz \\
+      0.50 & 56.2641 Hz & 59.9767 Hz \\
+      0.80 & 50.3833 Hz & 38.8631 Hz \\
+      2.00 & 48.7089 Hz & 51.4134 Hz \\\hline\hline
+    \end{tabular}
+    \caption{Eigenfrequencies from the linear part of the PNLSS models
+    identified from the multisine data and the PLL data respectively.}
+    \label{tab:table}
+  \end{table}
+\end{frame}
+
 \end{document}
 %%% Local Variables:
 %%% mode: latex

@@ -59,6 +59,15 @@ Zetas_req = 8e-3*ones(beam.n,1);
 
 beam.D = inv(Vst')*diag(2*Dst.*Zetas_req)*inv(Vst);
 
+%% HCB Reduction
+[Mhcb, Khcb, Thcb] = HCBREDUCE(beam.M, beam.K, (Nnl-2)*2+1, 3);
+beam_hcb = struct('M', Mhcb, 'K', Khcb, 'L', beam.L*Thcb, 'n', size(Khcb,1), ...
+    'D', Thcb'*beam.D*Thcb, 'Fex1', Thcb'*beam.Fex1, 'nonlinear_elements', {beam.nonlinear_elements});
+beam_hcb.nonlinear_elements{1}.force_direction = Thcb'*beam.nonlinear_elements{1}.force_direction;
+Nd_hcb = beam_hcb.n;
+Fex1_hcb = Thcb'*Fex1;
+
+Kst_hcb = Thcb'*Kst*Thcb;
 %% HB properties
 Nt = 2^10;
 imod = 1;  % Desired mode
@@ -121,26 +130,30 @@ load(sprintf('HConvDat_M%d.mat',imod), 'PkPs', 'Errs', 'errmax', 'Nhconv', 'ihco
 %% FRF
 Nh = Nhconv;
 Nhc = 2*Nh+1;
-Dscale = [1e-4*ones(Nd*Nhc,1); (Dst(1)+Dsl(1))/2];
+Dscale = [1e-4*ones(Nd_hcb*Nhc,1); (Dst(1)+Dsl(1))/2];
 
 Xcont = cell(size(Fas));
 Sols = cell(size(Fas));
 Pks = zeros(length(Fas), 2);
 
 for k=1:length(Fas)
-	beam.Fex1(end-1) = Fas(k);  % Forcing from last node
-	H1tmp = ((Kst-Ws^2*beam.M)+1j*(Ws*beam.D))\beam.Fex1;
-	X0 = zeros(Nd*Nhc, 1); X0(Nd+(1:2*Nd)) = [real(H1tmp); -imag(H1tmp)];
+    beam_hcb.Fex1 = Fex1_hcb*Fas(k);  % Forcing from last node
+	H1tmp = ((Kst_hcb-Ws^2*beam_hcb.M)+1j*(Ws*beam_hcb.D))\beam_hcb.Fex1;
+	X0 = zeros(Nd_hcb*Nhc, 1); X0(Nd_hcb+(1:2*Nd_hcb)) = [real(H1tmp); -imag(H1tmp)];
 
 	Sopt = struct('jac','full','stepmax',10000,'MaxFfunEvals',500, ...
         'dsmax', dsmax, 'Dscale', Dscale, 'dynamicDscale', 1);
 	Xcont{k} = solve_and_continue(X0, ...
-        @(X) HB_residual(X, beam, Nh, Nt, 'frf'), Ws, We, ds, Sopt);
-	Sols{k}  = [Xcont{k}(end, :); 
-        sqrt([1 0.5*ones(1,2*Nh)]*Xcont{k}(fdof:Nd:end-1,:).^2);
-        atan2d(-Xcont{k}(2*Nd+fdof,:), Xcont{k}(Nd+fdof,:))]';
+        @(X) HB_residual(X, beam_hcb, Nh, Nt, 'frf'), Ws, We, ds, Sopt);
+
+    Sols{k} = [Xcont{k}(end, :);
+        sqrt([1 0.5*ones(1,2*Nh)]*(kron(eye(Nhc), Thcb(fdof,:))*Xcont{k}(1:end-1,:)).^2);
+        atan2d(-Thcb(fdof,:)*Xcont{k}(2*Nd_hcb+(1:Nd_hcb),:), Thcb(fdof,:)*Xcont{k}(Nd_hcb+(1:Nd_hcb),:))]';
+    
     Pks(k, :) = interp1(Sols{k}(:,3), Sols{k}(:,1:2), -90, 'pchip');
 end
+beam.Fex1 = Fex1;
+save('data/Fresp.mat', 'Sols', 'Fas', 'Ws', 'We', 'beam', 'beam_hcb', 'Fex1_hcb', 'Thcb')
 
 %% Compute frequency response of PNLSS identified model
 % N = 1e3;
@@ -149,12 +162,14 @@ exc_lev = Fas;
 % Alevels = [1,5,10,15,30,60,120];
 Alevels = [15, 30, 60, 120];
 nx = [2 3];
-na = 3;
+na = 2;
 
 upsamp = 4;
 dataname = 'ms_full';
 load(sprintf('data/b%d_A%d_up%d_%s',5,Alevels(1),upsamp,dataname), 'fs')
 
+Ws = 450;
+We = 200;
 % We = We-Ws;
 % Ws = Ws+We;
 % We = Ws-We;
@@ -172,7 +187,7 @@ Uc(2) = 1;
 
 ds = 50*2*pi;
 dsmin = 0.0001*2*pi;
-dsmax = 500*2*pi;
+dsmax = 100*2*pi;
 
 Xpnlss = cell(length(exc_lev),1);
 Solspnlss = cell(length(exc_lev),1);
@@ -201,6 +216,7 @@ for iex=1:length(exc_lev)
         Ws, We, ds, Sopt, fun_postprocess);
     Solspnlss{iex} = [Xpnlss{iex}(end,:)' [Sol.Apv]' [Sol.Aph1]' [Sol.stab]' [Sol.unstab]'];
 end
+save(sprintf('./data/pnlssfresp_A%.2f_F%d_nx%s.mat',Alevel,fs,sprintf('%d',nx)), 'Solspnlss');
 
 %% Plot
 figure(10*ia)
@@ -235,7 +251,7 @@ xlim(sort([Ws We])/2/pi)
 xlabel('Forcing frequency $\omega$ (Hz)')
 ylabel('RMS response amplitude (m)')
 % savefig(sprintf('./fig/pnlssfrf_A%d_Amp.fig',Alevels(ia)))
-print(sprintf('FIGURES/pnlssfrf_Amp_b%d_A%d_up%d_%s_na%d_nx%s.eps',5,Alevels(ia),upsamp,dataname,na,sprintf('%d',nx)), '-depsc')
+% print(sprintf('FIGURES/pnlssfrf_Amp_b%d_A%d_up%d_%s_na%d_nx%s.eps',5,Alevels(ia),upsamp,dataname,na,sprintf('%d',nx)), '-depsc')
 % print('./fig/stabsol_Amp.eps', '-depsc')
 % print('./fig/dtstabsol_Amp.eps', '-depsc')
 
@@ -248,7 +264,7 @@ ylabel('Response phase (degs)')
 legend(aa(1:end), 'Location', 'northeast')
 % savefig(sprintf('./fig/pnlssfrf_A%d_Phase.fig',Alevels(ia)))
 % print(sprintf('./fig/pnlssfrf_A%.2f_Phase_nx%s.eps',Alevels(ia),sprintf('%d',nx)), '-depsc')
-print(sprintf('FIGURES/pnlssfrf_Phase_b%d_A%d_up%d_%s_na%d_nx%s.eps',5,Alevels(ia),upsamp,dataname,na,sprintf('%d',nx)), '-depsc')
+% print(sprintf('FIGURES/pnlssfrf_Phase_b%d_A%d_up%d_%s_na%d_nx%s.eps',5,Alevels(ia),upsamp,dataname,na,sprintf('%d',nx)), '-depsc')
 % print('./fig/stabsol_Phase.eps', '-depsc')
 % print('./fig/dtstabsol_Phase.eps', '-depsc')
 end

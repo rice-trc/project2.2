@@ -114,7 +114,8 @@ for ia=1:length(Alevels)
     figure(ia*10); clf()
     scatter_kde(y(:,1,1), ydot(:,1,1), '.', 'MarkerSize', 50)
     [n,c] = hist3([y(:,1,1),ydot(:,1,1)]);
-    hold on;  contour(c{1}, c{2}, n, 'LineWidth', 2);
+    dxdy = prod([range(y(:,1,1)) range(ydot(:,1,1))]./size(n));    
+    hold on;  contour(c{1}, c{2}, 0.5*(n/sum(n(:)))/dxdy, 'LineWidth', 2);
     yy=colorbar();
     ylabel(yy, 'pde')
     xlabel('y')

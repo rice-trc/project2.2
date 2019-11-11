@@ -511,6 +511,7 @@ INPUT ../../benchmark4/extabs_fig/b4_fresp_comp_pll_famp20_nx23-eps-converted-to
 INPUT ../../benchmark4/extabs_fig/b4_fresp_comp_pll_famp20_nx23-eps-converted-to.pdf
 INPUT ../../benchmark4/extabs_fig/b4_fresp_comp_pll_famp20_nx23-eps-converted-to.pdf
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/tfm/public/cm/cmssi10.tfm
+INPUT /usr/local/texlive/2018/texmf-dist/fonts/tfm/public/cm/cmss9.tfm
 OUTPUT post_meeting5_nidish.nav
 OUTPUT post_meeting5_nidish.toc
 OUTPUT post_meeting5_nidish.snm
@@ -520,6 +521,7 @@ INPUT ./post_meeting5_nidish.out
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb
+INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmssbx10.pfb
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi10.pfb
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb

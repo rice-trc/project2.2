@@ -54,9 +54,11 @@ end
 
 fdirs = {'famp001','famp01','famp05','famp08','famp20'};
 famps = [0.01, 0.1, 0.5, 0.8, 2.0];
+
+%%
 fia = 1;
 for fia=1:length(fdirs)
-%% PNLSS
+% %% PNLSS
 [Nt, P, R, n] = size(y);
 
 MaxCount = 100;
@@ -150,3 +152,24 @@ print(sprintf('./FIGURES/TDOMPERF_PNLSS_PLL_%s_nx%s.eps',fdirs{fia},sprintf('%d'
 % plot(err_linest)
 % plot(tc, err_nlest)
 end
+
+%% Assess Linear eigenvalues
+Wseq = zeros(length(fdirs),1);
+Wpll = zeros(length(fdirs),1);
+for fia=1:length(fdirs)
+    nx = [2 3];
+    
+    seq = load(sprintf('./Data/pnlssseqmodel_%s_nx%s.mat',fdirs{fia},sprintf('%d',nx)), 'model');
+    pll = load(sprintf('./Data/pnlss_pll_%s_nx%s.mat', fdirs{fia}, sprintf('%d',nx)), 'model');
+    
+    Pseq = pole(d2c(ss(seq.model.A, seq.model.B, seq.model.C, seq.model.D, 1./fsamp)));
+    Ppll = pole(d2c(ss(pll.model.A, pll.model.B, pll.model.C, pll.model.D, 1./fsamp)));
+    
+    [~,sseq] = sort(imag(Pseq));
+    [~,spll] = sort(imag(Ppll));
+%     disp(table(Pseq(sseq([1 end])), Ppll(spll([1 end]))))
+    
+    Wseq(fia) = imag(Pseq(sseq(end)));
+    Wpll(fia) = imag(Ppll(spll(end)));
+end
+table(fdirs',Wseq/2/pi,Wpll/2/pi)

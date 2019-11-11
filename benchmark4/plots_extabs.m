@@ -47,7 +47,7 @@ mA = abs(a.*Phi(res_NMA.options.eval_DOF))/sqrt(2);
 aa = gobjects(size(Fas));
 bb = gobjects(3,1);
 
-pll = 1;
+pll = 0;
 
 factive = 1:length(Fas);
 % factive = [1 2 3 4 6];
@@ -72,7 +72,7 @@ for ia=1:length(fdirs)
         aa(iex) = plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,2)/Fas(iex)*Fas(iex), '-', 'Color', colos(iex,:)); hold on
         if iex==1
             bb(1) = plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,2)/Fas(iex)*Fas(iex), '-', 'Color', colos(iex,:)); hold on
-            bb(2) = plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2)/Fas(iex)*Fas(iex), '.--', 'Color', colos(iex,:))
+            bb(2) = plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2)/Fas(iex)*Fas(iex), '--', 'Color', colos(iex,:));
             plot(om1(ris1)/2/pi, mA(ris1)/Fas(iex)*Fas(iex), '+:', 'Color', colos(iex,:));
             bb(3) = plot(om2(ris2)/2/pi, mA(ris2)/Fas(iex)*Fas(iex), '+:', 'Color', colos(iex,:));
             
@@ -81,7 +81,7 @@ for ia=1:length(fdirs)
             legend(bb(3), 'NM-ROM')
         else
             plot(Sols{iex}(:,1)/2/pi, Sols{iex}(:,2)/Fas(iex)*Fas(iex), '-', 'Color', colos(iex,:)); hold on
-            plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2)/Fas(iex)*Fas(iex), '.--', 'Color', colos(iex,:))
+            plot(Solspnlss{iex}(:,1)/2/pi, Solspnlss{iex}(:,2)/Fas(iex)*Fas(iex), '--', 'Color', colos(iex,:))
             plot(om1(ris1)/2/pi, mA(ris1)/Fas(iex)*Fas(iex), '+:', 'Color', colos(iex,:));
             plot(om2(ris2)/2/pi, mA(ris2)/Fas(iex)*Fas(iex), '+:', 'Color', colos(iex,:));
         end
@@ -113,7 +113,8 @@ for ia=1:length(fdirs)
     figure(ia*10); clf()
     scatter_kde(y(:,1,1,fdof), ydot(:,1,1,fdof), '.', 'MarkerSize', 50)
     [n,c] = hist3([y(:,1,1,fdof), ydot(:,1,1,fdof)]);
-    hold on; contour(c{1}, c{2}, n, 'LineWidth', 2);
+	dxdy = prod([range(y(:,1,1,fdof)) range(ydot(:,1,1,fdof))]./size(n));
+    hold on; contour(c{1}, c{2}, 0.5*(n/sum(n(:)))/dxdy, 'LineWidth', 2);
     yy=colorbar();
     ylabel(yy, 'pde')
     xlabel('y')
