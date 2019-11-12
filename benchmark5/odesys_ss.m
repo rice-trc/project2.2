@@ -2,7 +2,7 @@ function dxdt = odesys_ss(t,x, u, model)
 % system with NL.
 % fex should either be a function or interpolated table
 
-dxdt = model.A*x + model.B*u(t) + model.fnls*fnl(x(model.nx), x(model.nxd), model.nlpars);
+dxdt = model.A*x + model.B*u(t) + fnl(x(model.nx), x(model.nxd), model.nlpars);
 end
 
 function f = fnl(q,u,par)
