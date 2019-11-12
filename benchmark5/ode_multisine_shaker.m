@@ -210,7 +210,7 @@ end
 disp(['ode5 with multisine in time domain required ' num2str(toc) ' s.']);
 
 if savedata
-    save(sprintf('data/b%d_A%d_up%d_%s',benchmark,A,upsamp,dataname),...
+    save(sprintf('data/b%d_shaker_A%d_up%d_%s',benchmark,A,upsamp,dataname),...
         'u','y','ydot','f1','f2','fs','freq','t','A','beam','MS','upsamp')
 end
 
