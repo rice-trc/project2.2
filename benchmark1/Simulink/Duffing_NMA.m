@@ -145,7 +145,7 @@ a_w_L_2_NMA = sqrt([1 0.5*ones(1,2*H)]*w_L_2_NMA_sum.^2); % compute amplitude
 
 %% Setup simulated experiments
 
-Shaker = 'no'; % 'yes', 'no'
+Shaker = 'yes'; % 'yes', 'no'
 exc_node = 1; % node for external excitation
  % Simulation time in seconds
 phase_lag = 90; % phase lag in degree
