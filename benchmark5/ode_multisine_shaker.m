@@ -123,6 +123,13 @@ smbeam.A([beam_hcb.n+(1:beam_hcb.n) end], [1:beam_hcb.n end-1]) = smbeam.A([beam
 smbeam.B = [zeros(2*beam_hcb.n,1); B_shaker(:,1)];
 smbeam.C = [eye(beam_hcb.n) zeros(beam_hcb.n, size(A,1)-beam_hcb.n)];
 smbeam.D = 0;
+smbeam.nx = 1; smbeam.nxd = beam_hcb.n+1;
+smbeam.fnls = [1;zeros(size(A,1)-1,1)];
+smbeam.nonlinear_elements = beam_hcb.nonlinear_elements;
+smbeam.nonlinear_elements{1}.force_direction = ...
+   [zeros(beam_hcb.n,1); -beam_hcb.M\smbeam.nonlinear_elements{1}.force_direction; zeros(size(A_shaker,1),1)];
+smbeam.n = size(smbeam.A,1);
+
 %% multisine, using time domain formulation
 exc_lev = [1,5,10,15,30,60,120,240];
 f1 = 10;
@@ -171,6 +178,7 @@ fprintf(['running ms benchmark:%d. R:%d, P:%d, Nt_int:%d, fs_int:%g, ',...
 for A = exc_lev(end)
 fprintf('##### A: %g\n',A);
 u = zeros(Nt,P,R);
+sf = zeros(Nt,P,R);
 y = zeros(Nt,P,R,n);
 ydot = zeros(Nt,P,R,n);
 
@@ -181,12 +189,14 @@ for r=1:R
     fprintf('R: %d\n',r);
     % multisine force signal
     [fex, MS{r}] = multisine(f1, f2, N, A, [], [], r);
-    beam.Fex1 = Fex1*A;
+%    beam.Fex1 = Fex1*A;
 %     [tout,Y] = ode45(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
 %     Y = ode8(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
+
+    smbeam.B = [zeros(2*beam_hcb.n,1); B_shaker(:,1)]*A;
 tic
-%     [tout,Y] = ode45(@(t,y) odesys(t,y, fex, beam_hcb), tint,zeros(2*beam_hcb.n,1));
-    Yhcb = ode8(@(t,y) odesys(t,y, fex, beam_hcb), tint,zeros(2*beam_hcb.n,1));
+    [tout,Y] = ode45(@(t,y) odesys_ss(t,y, fex, smbeam), tint,zeros(2*smbeam.n,1));
+%    Yhcb = ode8(@(t,y) odesys_ss(t,y, fex, beam_hcb), tint,zeros(2*beam_hcb.n,1));
     Y = Yhcb*blkdiag(Thcb', Thcb');
 toc
     % no need to downsample u. Just use the downsampled time vector
