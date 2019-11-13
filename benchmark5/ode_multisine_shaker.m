@@ -121,17 +121,18 @@ K_stinger_elem = k_stinger*[-beam_hcb.M\Thcb(fdof,:)'*Thcb(fdof,:), beam_hcb.M\T
 smbeam.A = blkdiag([zeros(beam_hcb.n) eye(beam_hcb.n); -beam_hcb.M\beam_hcb.K, -beam_hcb.M\beam_hcb.D], A_shaker);
 smbeam.A([beam_hcb.n+(1:beam_hcb.n) end], [1:beam_hcb.n end-1]) = smbeam.A([beam_hcb.n+(1:beam_hcb.n) end], [1:beam_hcb.n end-1])+K_stinger_elem;
 smbeam.B = [zeros(2*beam_hcb.n,1); B_shaker(:,1)];
-smbeam.C = [eye(beam_hcb.n) zeros(beam_hcb.n, size(A,1)-beam_hcb.n)];
+smbeam.C = [eye(beam_hcb.n) zeros(beam_hcb.n, size(smbeam.A,1)-beam_hcb.n)];
 smbeam.D = 0;
-smbeam.nx = 1; smbeam.nxd = beam_hcb.n+1;
-smbeam.fnls = [1;zeros(size(A,1)-1,1)];
 smbeam.nonlinear_elements = beam_hcb.nonlinear_elements;
+smbeam.nonlinear_elements{1}.disp_direction = ...
+    [beam_hcb.nonlinear_elements{1}.force_direction; zeros(beam_hcb.n,1); zeros(size(A_shaker,1),1)];
 smbeam.nonlinear_elements{1}.force_direction = ...
-   [zeros(beam_hcb.n,1); -beam_hcb.M\smbeam.nonlinear_elements{1}.force_direction; zeros(size(A_shaker,1),1)];
+    [zeros(beam_hcb.n,1); -beam_hcb.M\smbeam.nonlinear_elements{1}.force_direction; zeros(size(A_shaker,1),1)];
 smbeam.n = size(smbeam.A,1);
 
 %% multisine, using time domain formulation
 exc_lev = [1,5,10,15,30,60,120,240];
+exc_lev = [15,30,60,120];
 f1 = 10;
 f2 = 100;
 N = 1e3;
@@ -177,6 +178,7 @@ fprintf(['running ms benchmark:%d. R:%d, P:%d, Nt_int:%d, fs_int:%g, ',...
     ' f0:%g, upsamp:%d\n'],benchmark,R,P,Ntint,fsint,f0,upsamp);
 for A = exc_lev(end)
 fprintf('##### A: %g\n',A);
+sf = zeros(Nt,P,R);
 u = zeros(Nt,P,R);
 sf = zeros(Nt,P,R);
 y = zeros(Nt,P,R,n);
@@ -193,14 +195,17 @@ for r=1:R
 %     [tout,Y] = ode45(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
 %     Y = ode8(@(t,y) odesys(t,y, fex, beam), tint,[q0;u0]);
 
-    smbeam.B = [zeros(2*beam_hcb.n,1); B_shaker(:,1)]*A;
+    smbeam.B = [zeros(2*beam_hcb.n,1); B_shaker(:,1)];
 tic
-    [tout,Y] = ode45(@(t,y) odesys_ss(t,y, fex, smbeam), tint,zeros(2*smbeam.n,1));
-%    Yhcb = ode8(@(t,y) odesys_ss(t,y, fex, beam_hcb), tint,zeros(2*beam_hcb.n,1));
-    Y = Yhcb*blkdiag(Thcb', Thcb');
+    [tout,Yhcb] = ode45(@(t,y) odesys_ss(t,y, fex, smbeam), tint,zeros(smbeam.n,1));
+%    Yhcb = ode8(@(t,y) odesys_ss(t,y, fex, smbeam), tint,zeros(smbeam.n,1));
 toc
+
+    Y = Yhcb(:,1:(2*beam_hcb.n))*blkdiag(Thcb', Thcb');
+
     % no need to downsample u. Just use the downsampled time vector
     u(:,:,r) = reshape(fex(t), [Nt,P]);
+    sf(:,:,r) = dsample(reshape(k_stinger*(Yhcb(:,end-1)-Y(:,fdof)), [Ntint,Pint]),upsamp);
     if upsamp > 1
         % decimate measured signal by upsamp ratio
         ytmp = dsample(reshape(Y(:,1:n),[Ntint,Pint,1,n]),upsamp);
@@ -221,7 +226,7 @@ disp(['ode5 with multisine in time domain required ' num2str(toc) ' s.']);
 
 if savedata
     save(sprintf('data/b%d_shaker_A%d_up%d_%s',benchmark,A,upsamp,dataname),...
-        'u','y','ydot','f1','f2','fs','freq','t','A','beam','MS','upsamp')
+        'sf', 'u','y','ydot','f1','f2','fs','freq','t','A','beam','MS','upsamp')
 end
 
 

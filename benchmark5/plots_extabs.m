@@ -4,7 +4,7 @@ addpath('../src/nlvib/SRC/')
 addpath('../src/nlvib/SRC/MechanicalSystems/')
 addpath('../src/matlab/')
 
-load('./Data/Fresp.mat', 'Sols', 'Fas', 'beam', 'beam_hcb', 'Fex1_hcb', 'Thcb', 'Ws', 'We')
+load('./data/Fresp.mat', 'Sols', 'Fas', 'beam', 'beam_hcb', 'Fex1_hcb', 'Thcb', 'Ws', 'We')
 beam_hcb.Fex1 = Fex1_hcb;
 Alevels = [15, 30, 60, 120];
 
