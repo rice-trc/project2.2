@@ -248,13 +248,18 @@ switch Shaker
         I = 50; % integrator gain
         D = 0.01; % derivative gain
         
-        time_interval = [0.1 5 0.1 15 0.1 15 0.1 15 0.1 15 0.1 15];
-        simin.time = zeros(1,13);
-        for i = 1:12
+%         time_interval = [0.1 5 0.1 15 0.1 15 0.1 15 0.1 15 0.1 15];
+
+        Npoints = 50;
+        time_interval = kron(ones(1,Npoints),[0.1, 15]);
+        
+        simin.time = zeros(1,length(time_interval)+1);
+        for i = 1:length(time_interval)
             simin.time(i+1) = simin.time(i)+time_interval(i);
         end
         simtime = simin.time(end);
-        simin.signals.values = 30*[0 5 5 20 20 40 40 100 100 180 180 270 270]';
+%         simin.signals.values = 30*[0 5 5 20 20 40 40 100 100 180 180 270 270]';
+        simin.signals.values = 30*[0 kron(logspace(0,1.3,Npoints),[1 1])]';
         simin.signals.dimensions = 1;
         
         % simulation of experiment
