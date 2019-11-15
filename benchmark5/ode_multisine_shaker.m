@@ -176,7 +176,7 @@ nt = length(t);          % total number of points
 
 fprintf(['running ms benchmark:%d. R:%d, P:%d, Nt_int:%d, fs_int:%g, ',...
     ' f0:%g, upsamp:%d\n'],benchmark,R,P,Ntint,fsint,f0,upsamp);
-for A = exc_lev(end)
+for A = exc_lev(1:end-1)
 fprintf('##### A: %g\n',A);
 sf = zeros(Nt,P,R);
 u = zeros(Nt,P,R);
@@ -257,7 +257,7 @@ ylabel('Magnitude (dB)')
 xlim([40,70])
 grid minor
 grid on
-export_fig(gcf,sprintf('%s/b%d_A%g_fft_comp_n%d',fpath,benchmark,A,idof),'-png')
+export_fig(gcf,sprintf('%s/b%d_shaker_A%g_fft_comp_n%d',fpath,benchmark,A,idof),'-png')
 end
 
 end

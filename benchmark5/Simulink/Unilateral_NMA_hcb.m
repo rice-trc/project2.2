@@ -20,7 +20,7 @@ set(0,'defaultTextInterpreter','latex');
 set(0, 'DefaultLegendInterpreter', 'latex');
 
 imod = 1;  % Desired mode
-Shaker = 'no'; % 'yes', 'no'
+Shaker = 'yes'; % 'yes', 'no'
 
 %% System definition
 len = 0.70;
@@ -229,7 +229,12 @@ k_stinger = (E_stinger*A_stinger)/l_stinger;
 
 switch Shaker
     case 'yes'
-        time_interval = [0.1 7 0.1 5 0.1 5 0.1 5 0.1 5 0.1 5 0.1 5 0.1 5];
+        
+        Npoints = 50;
+%         time_interval = [0.1 7 0.1 5 0.1 5 0.1 5 0.1 5 0.1 5 0.1 5 0.1 5];
+        
+        time_interval = [0.1 7 kron(ones(1,Npoints-1), [0.1 5])];
+
         simin.time = zeros(1,length(time_interval)+1);
         for i = 1:length(time_interval)
             simin.time(i+1) = simin.time(i)+time_interval(i);
@@ -242,7 +247,8 @@ switch Shaker
         
         switch imod
             case 1
-                simin.signals.values = 10*[0 1 1 5 5 15 15 30 30 50 50 90 90 150 150 300 300]';
+                simin.signals.values = 10*[0 kron(logspace(0, 2.9, Npoints), [1 1])]';
+%                 simin.signals.values = 10*[0 1 1 5 5 15 15 30 30 50 50 90 90 150 150 300 300]';
             case 2
                 simin.signals.values = 50*[0 1 1 5 5 15 15 20 20 30 30 50 50 80 80 150 150]';
             case 3
@@ -349,7 +355,8 @@ semilogx(abs(Y_HB_1(2*(exc_node-1-1)+1,:)),om_HB/om_free(imod),'g-', 'LineWidth'
 hold on
 semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),res_NMA.om_i/(res_LMA.freq(imod)*2*pi),'k.','MarkerSize',10)
 xlabel('amplitude in m'); ylabel('$\omega/\omega_0$')
-legend('NMA with NLvib','simulated experiment')
+legend('NMA with NLvib','simulated experiment','Location','northwest')
+print(['../extabs_fig/PLLNMA_shaker_' Shaker '_Freq.eps'], '-depsc')
 
 % Modal damping ratio vs. amplitude
 figure; 
@@ -357,4 +364,5 @@ semilogx(abs(Y_HB_1(2*(exc_node-1-1)+1,:)),del_HB*1e2,'g-', 'LineWidth', 2);
 hold on
 semilogx(abs(res_NMA.Psi_tilde_i(opt.NMA.eval_DOF,:)),abs(res_NMA.del_i_nl)*100,'k.','MarkerSize',10)
 xlabel('amplitude in m'); ylabel('modal damping ratio in %')
-legend('NMA with NLvib','simulated experiment')
+legend('NMA with NLvib','simulated experiment','Location','northwest')
+print(['../extabs_fig/PLLNMA_shaker_' Shaker '_Damp.eps'], '-depsc')

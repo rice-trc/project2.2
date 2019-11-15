@@ -17,7 +17,7 @@ nx = [2 3];
 na = 2;
 
 %% Process Simulated Experiments Data
-load('./data/SimExp_shaker_no_NMROM.mat', 'res_NMA');
+load('./data/SimExp_shaker_yes_NMROM.mat', 'res_NMA');
 Psi = res_NMA.Phi_tilde_i;
 om = res_NMA.om_i;
 del = res_NMA.del_i_nl;
@@ -36,7 +36,7 @@ bb = gobjects(3,1);
 
 upsamp = 4;
 dataname = 'ms_full';
-load(sprintf('data/b%d_A%d_up%d_%s',5,Alevels(1),upsamp,dataname), 'fs')
+load(sprintf('data/b%d_shaker_A%d_up%d_%s',5,Alevels(1),upsamp,dataname), 'fs')
 
 pll = 0;
 
@@ -46,7 +46,7 @@ colos = distinguishable_colors(length(Fas));
 for ia=1:length(Alevels)
     Alevel = Alevels(ia);
     if ~pll
-        load(sprintf('./data/pnlssfresp_A%.2f_F%d_nx%s.mat',Alevel,fs,sprintf('%d',nx)), 'Solspnlss');
+        load(sprintf('./data/pnlssfresp_shaker_A%.2f_F%d_nx%s.mat',Alevel,fs,sprintf('%d',nx)), 'Solspnlss');
     else
         error('No PLL PNLSS data available');
     end
@@ -92,7 +92,7 @@ for ia=1:length(Alevels)
     legend(aax, bb(1:3), 'Location', 'northwest');
     
     if ~pll
-        print(sprintf('./extabs_fig/b5_fresp_comp_A%.2f_nx%s.eps',Alevel,sprintf('%d',nx)), '-depsc')
+        print(sprintf('./extabs_fig/b5_shaker_fresp_comp_A%.2f_nx%s.eps',Alevel,sprintf('%d',nx)), '-depsc')
     else
         error('No PLL PNLSS data available');
 %         print(sprintf('./extabs_fig/b4_fresp_comp_pll_%s_nx%s.eps',fdirs{ia},sprintf('%d',nx)), '-depsc')
@@ -104,7 +104,7 @@ upsamp = 4;
 dataname = 'ms_full';
 
 for ia=1:length(Alevels)
-    load(sprintf('data/b5_A%d_up%d_%s',Alevels(ia),upsamp,dataname))
+    load(sprintf('data/b5_shaker_A%d_up%d_%s',Alevels(ia),upsamp,dataname))
 %     load(sprintf('data/b5_shaker_A%d_up%d_%s',Alevels(ia),upsamp,dataname))
 %     fdof = find(beam.Fex1);
     fdof = beam.n-1;
@@ -123,7 +123,7 @@ for ia=1:length(Alevels)
     title(sprintf('A = %.2f N', Alevels(ia)))
     fprintf('done %d/%d\n', ia, length(Alevels))
     
-%     print(sprintf('./extabs_fig/b5_tdata_kern_A%.2f.eps',Alevels(ia)), '-depsc')
+    print(sprintf('./extabs_fig/b5_shaker_tdata_kern_A%.2f.eps',Alevels(ia)), '-depsc')
     close(ia*10)
 end
 
@@ -137,10 +137,10 @@ aa = gobjects(size(Alevels));
 bb = gobjects(2,1);
 colos = distinguishable_colors(length(Alevels));
 for ia=1:length(Alevels)
-    load(sprintf('data/b5_A%d_up%d_%s',Alevels(ia),upsamp,dataname), 't', 'y', 'u', 'fs')
+%     load(sprintf('data/b5_A%d_up%d_%s',Alevels(ia),upsamp,dataname), 't', 'y', 'u', 'fs')
     
-%     load(sprintf('data/b5_shaker_A%d_up%d_%s',Alevels(ia),upsamp,dataname), 't', 'y', 'sf', 'fs')
-%     u = sf; 
+    load(sprintf('data/b5_shaker_A%d_up%d_%s',Alevels(ia),upsamp,dataname), 't', 'y', 'sf', 'fs')
+    u = sf; 
     fdof = beam.n-1;
     
     y = reshape(y(:,end,1,fdof), [], 1);
@@ -171,4 +171,4 @@ ylabel('Frequency content amplitude')
 aax=axes('position',get(gca,'position'),'visible','off');
 legend(aax, bb(1:2), 'Location', 'northeast');
 
-% print('./extabs_fig/b5_tdata_freqcont.eps','-depsc')
+print('./extabs_fig/b5_shaker_tdata_freqcont.eps','-depsc')
